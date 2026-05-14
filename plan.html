@@ -652,20 +652,18 @@ function confirmInfo() {
   const g  = document.getElementById('f-grade').value;
   const vo = document.getElementById('f-volume').value;
   const u  = document.getElementById('f-unit').value;
-  const l  = document.getElementById('f-lessons').value;
   const si = document.getElementById('f-situation').value.trim();
 
-  if (!s || !g || !u) { alert('请至少填写学科、年级和单元名称'); return; }
+  if (!s || !g || !u) { alert('请至少填写学科、年级和单元'); return; }
 
-  const unitFull = u;
-  const textbookFull = `${tb}${vo ? ' '+vo : ''}`;
+  const textbookFull = [tb, vo].filter(Boolean).join(' ');
+  const unitDisplay  = [vo, u].filter(Boolean).join('·');
 
-  ST.info = { subject:s, grade:g, textbook:textbookFull, unit:unitFull, lessons:l, situation:si };
+  ST.info = { subject:s, grade:g, textbook:textbookFull, unit:u, volume:vo, situation:si };
   ST.infoConfirmed = true;
-  ST.lessons = []; // 课时动态添加
 
   document.getElementById('infoSummary').innerHTML =
-    `<b>${s}</b> · <b>${g}</b> · ${textbookFull||'教材待填'} · <b>${vo?vo+'·':''}${unitFull}</b> · 学情：${si||'未填写'}`;
+    `<b>${s}</b> · <b>${g}</b> · ${textbookFull||'—'} · <b>${unitDisplay}</b>${si ? ' · 学情已填' : ''}`;
   document.getElementById('infoToggleBtn').textContent = '修改信息 ▾';
   document.getElementById('infoForm').classList.remove('open');
 
@@ -843,12 +841,22 @@ function cleanMD(text) {
 }
 
 // ══ 更新质检清单 ══
-function updateChecklist(items) {
+function updateChecklist(title, items) {
   const body = document.getElementById('checklistBody');
-  if (!body || !items || !items.length) return;
-  body.innerHTML = items.map(item =>
-    `<div class="checklist-item">✓ ${item}</div>`
-  ).join('');
+  if (!body) return;
+  if (!items || !items.length) return;
+  // 追加新的检查项（不清空，保留历史）
+  const section = document.createElement('div');
+  section.className = 'checklist-section';
+  section.innerHTML = `
+    <div class="checklist-section-title">${title}</div>
+    ${items.map(item => `<div class="checklist-item">${item}</div>`).join('')}
+  `;
+  // 移除空占位
+  const empty = body.querySelector('.checklist-empty');
+  if (empty) empty.remove();
+  body.appendChild(section);
+  body.scrollTop = body.scrollHeight;
 }
 
 // ══ API ══
@@ -915,6 +923,7 @@ async function genChallenge() {
     hideTyping();
     ST.doc.challenge = reply;
     renderDoc();
+    updateChecklist('挑战情境', ['情境真实，任务明确', '语言通俗符合年段', '对2/3学生有挑战性']);
     addBubble('ai', reply, [
       {label:'✓ 满意，生成②知识框架', cls:'g', fn:'genKnowledge()'},
       {label:'重新生成', fn:'genChallenge()'},
