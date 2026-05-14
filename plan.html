@@ -559,9 +559,9 @@ body {
 <script>
 // ══ 配置 ══
 const CFG = {
-  apiKey: 'apikey-20260331225222-9x6vh',
-  model:  'ep-20260514140703-ng8rf',
-  url:    'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
+  apiKey: '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',
+  model:  'claude-sonnet-4-20250514',
+  url:    'https://api.anthropic.com/v1/messages'
 };
 
 const SYS = `你是一位专业的单元学历案备课助手，基于华东师范大学崔允漷团队的学历案理论框架，帮助教师设计以学生为中心、指向核心素养的单元教学方案。
@@ -787,20 +787,26 @@ async function callAI(userText, tab) {
 
   const r = await fetch(CFG.url, {
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':`Bearer ${CFG.apiKey}`},
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': CFG.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body: JSON.stringify({
       model: CFG.model,
-      messages:[
-        {role:'system', content: SYS + '\n\n' + infoCtx},
-        ...msgs
-      ],
       max_tokens: 2000,
-      temperature: 0.7
+      system: SYS + '\n\n' + infoCtx,
+      messages: msgs
     })
   });
-  if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||`错误${r.status}`); }
+  if(!r.ok){
+    let errMsg = `请求失败 (${r.status})`;
+    try { const e=await r.json(); errMsg=e.error?.message||errMsg; } catch(e){}
+    throw new Error(errMsg);
+  }
   const data = await r.json();
-  const reply = data.choices[0].message.content;
+  const reply = data.content[0].text;
   ST.chatContexts[tab].push({role:'user', content:userText});
   ST.chatContexts[tab].push({role:'assistant', content:reply, _display:{text:reply}});
   return reply;
