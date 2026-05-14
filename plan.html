@@ -108,7 +108,7 @@ body {
 
 .info-form-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr) 2fr;
+  grid-template-columns: repeat(3, 1fr) repeat(3, 1fr);
   gap: 10px;
   padding-top: 0.8rem;
   align-items: end;
@@ -436,13 +436,19 @@ body {
     <div class="info-form-grid">
       <div class="info-form-group">
         <label>学科</label>
-        <select id="f-subject">
+        <select id="f-subject" onchange="updateTextbook()">
           <option value="">请选择</option>
           <option>语文</option><option>数学</option><option>英语</option>
           <option>物理</option><option>化学</option><option>生物</option>
           <option>历史</option><option>地理</option><option>道德与法治</option>
           <option>科学</option><option>美术</option><option>音乐</option>
           <option>体育与健康</option><option>信息技术</option>
+        </select>
+      </div>
+      <div class="info-form-group">
+        <label>教材版本</label>
+        <select id="f-textbook">
+          <option value="">请先选学科</option>
         </select>
       </div>
       <div class="info-form-group">
@@ -456,23 +462,32 @@ body {
         </select>
       </div>
       <div class="info-form-group">
-        <label>教材版本</label>
-        <input type="text" id="f-textbook" placeholder="如：人教版上册">
+        <label>上/下册</label>
+        <select id="f-volume">
+          <option value="">请选择</option>
+          <option>上册</option>
+          <option>下册</option>
+          <option>全册</option>
+        </select>
       </div>
       <div class="info-form-group">
-        <label>单元名称</label>
-        <input type="text" id="f-unit" placeholder="如：第三单元《近代化探索》">
+        <label>单元</label>
+        <select id="f-unit">
+          <option value="">请选择</option>
+          <option>第一单元</option><option>第二单元</option><option>第三单元</option>
+          <option>第四单元</option><option>第五单元</option><option>第六单元</option>
+          <option>第七单元</option><option>第八单元</option>
+        </select>
       </div>
       <div class="info-form-group">
         <label>课时数</label>
         <select id="f-lessons">
           <option value="">请选择</option>
-          <option>2课时</option><option>3课时</option><option>4课时</option>
-          <option>5课时</option><option>6课时</option><option>7课时</option>
-          <option>8课时及以上</option>
+          <option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option>
         </select>
       </div>
-      <div class="info-form-group info-situa">
+      <div class="info-form-group info-situa" style="grid-column:span 3;">
         <label>学情简述</label>
         <input type="text" id="f-situation" placeholder="如：学生已学过…，重难点是…，整体基础中等">
       </div>
@@ -596,39 +611,70 @@ function toggleInfoBar() {
   btn.textContent = open ? (ST.infoConfirmed ? '修改信息 ▾' : '填写信息 ▾') : '收起 ▴';
 }
 
+// 教材版本联动
+const TEXTBOOKS = {
+  '语文':   ['部编版','北师大版','苏教版','语文版'],
+  '数学':   ['人教版','北师大版','苏教版','冀教版'],
+  '英语':   ['人教版PEP','外研版','冀教版','北师大版'],
+  '物理':   ['人教版','粤教版','苏教版'],
+  '化学':   ['人教版','粤教版','苏教版'],
+  '生物':   ['人教版','北师大版','苏教版'],
+  '历史':   ['部编版','岳麓版','华师大版'],
+  '地理':   ['人教版','湘教版','中图版'],
+  '道德与法治': ['部编版'],
+  '科学':   ['教科版','苏教版','浙教版'],
+  '美术':   ['人教版','湘美版'],
+  '音乐':   ['人教版','湘艺版'],
+  '体育与健康': ['人教版'],
+  '信息技术': ['人教版','浙教版'],
+};
+
+function updateTextbook() {
+  const sub = document.getElementById('f-subject').value;
+  const sel = document.getElementById('f-textbook');
+  sel.innerHTML = '<option value="">请选择</option>';
+  if (sub && TEXTBOOKS[sub]) {
+    TEXTBOOKS[sub].forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    });
+  }
+}
+
 function confirmInfo() {
-  const s = document.getElementById('f-subject').value;
-  const g = document.getElementById('f-grade').value;
-  const t = document.getElementById('f-textbook').value.trim();
-  const u = document.getElementById('f-unit').value.trim();
-  const l = document.getElementById('f-lessons').value;
+  const s  = document.getElementById('f-subject').value;
+  const tb = document.getElementById('f-textbook').value;
+  const g  = document.getElementById('f-grade').value;
+  const vo = document.getElementById('f-volume').value;
+  const u  = document.getElementById('f-unit').value;
+  const l  = document.getElementById('f-lessons').value;
   const si = document.getElementById('f-situation').value.trim();
 
-  if (!s || !g || !u) { alert('请至少填写学科、年级和单元名称'); return; }
+  if (!s || !g || !u || !l) { alert('请至少填写学科、年级、单元和课时数'); return; }
 
-  ST.info = { subject:s, grade:g, textbook:t, unit:u, lessons:l, situation:si };
+  const unitFull = `${vo ? vo+'·' : ''}${u}`;
+  const textbookFull = `${tb}${vo ? ' '+vo : ''}`;
+
+  ST.info = { subject:s, grade:g, textbook:textbookFull, unit:unitFull, lessons:l, situation:si };
   ST.infoConfirmed = true;
   ST.doc.lessons = Array.from({length: parseInt(l)||3}, ()=>({name:'',objectives:'',tasks:'',process:''}));
 
-  // 更新摘要栏
   document.getElementById('infoSummary').innerHTML =
-    `<b>${s}</b> · <b>${g}</b> · ${t||'教材待填'} · <b>${u}</b> · ${l||'课时待定'} · 学情：${si||'未填写'}`;
+    `<b>${s}</b> · <b>${g}</b> · ${textbookFull||'教材待填'} · <b>${unitFull}</b> · ${l}课时 · 学情：${si||'未填写'}`;
   document.getElementById('infoToggleBtn').textContent = '修改信息 ▾';
   document.getElementById('infoForm').classList.remove('open');
 
-  // 更新步骤标签
   updateTabs();
-
-  // 开始对话
   startChat();
 }
 
 function resetInfo() {
-  ['f-subject','f-grade','f-textbook','f-unit','f-lessons','f-situation'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el.tagName === 'SELECT') el.value = '';
-    else el.value = '';
+  ['f-subject','f-grade','f-volume','f-lessons','f-situation'].forEach(id => {
+    document.getElementById(id).value = '';
   });
+  document.getElementById('f-textbook').innerHTML = '<option value="">请先选学科</option>';
+  document.getElementById('f-unit').value = '';
 }
 
 // ══ 步骤标签 ══
