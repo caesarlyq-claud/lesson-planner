@@ -760,7 +760,8 @@ function addBubble(role, text, btns=[], save=false) {
   w.appendChild(d);
   w.scrollTop = w.scrollHeight;
   if (save) {
-    ST.chatContexts[ST.currentTab].push({ role, _display:{ text, btns } });
+    const storeRole = role === 'ai' ? 'assistant' : role;
+    ST.chatContexts[ST.currentTab].push({ role: storeRole, _display:{ text, btns } });
   }
 }
 
@@ -786,7 +787,7 @@ function setLoad(v) {
 // ══ API ══
 async function callAI(userText, tab) {
   const ctx = ST.chatContexts[tab];
-  const msgs = ctx.filter(m=>m.role).map(m=>({ role:m.role, content:m.content||m._display?.text||'' }));
+  const msgs = ctx.filter(m=>m.role && (m.role==='user'||m.role==='assistant')).map(m=>({ role:m.role==='ai'?'assistant':m.role, content:m.content||m._display?.text||'' }));
   msgs.push({ role:'user', content: userText });
 
   const infoCtx = `【当前备课信息】学科：${ST.info.subject}，年级：${ST.info.grade}，教材：${ST.info.textbook}，单元：${ST.info.unit}，课时数：${ST.info.lessons}，学情：${ST.info.situation}`;
