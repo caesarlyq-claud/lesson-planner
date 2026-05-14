@@ -559,7 +559,7 @@ body {
 <script>
 // ══ 配置 ══
 const CFG = {
-  apiKey: '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',
+  get apiKey() { return localStorage.getItem('claude_api_key') || ''; },
   model:  'claude-sonnet-4-20250514',
   url:    'https://api.anthropic.com/v1/messages'
 };
