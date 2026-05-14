@@ -108,7 +108,7 @@ body {
 
 .info-form-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr) repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   padding-top: 0.8rem;
   align-items: end;
@@ -467,7 +467,6 @@ body {
           <option value="">请选择</option>
           <option>上册</option>
           <option>下册</option>
-          <option>全册</option>
         </select>
       </div>
       <div class="info-form-group">
@@ -479,15 +478,8 @@ body {
           <option>第七单元</option><option>第八单元</option>
         </select>
       </div>
-      <div class="info-form-group">
-        <label>课时数</label>
-        <select id="f-lessons">
-          <option value="">请选择</option>
-          <option>2</option><option>3</option><option>4</option>
-          <option>5</option><option>6</option><option>7</option><option>8</option>
-        </select>
-      </div>
-      <div class="info-form-group info-situa" style="grid-column:span 3;">
+
+      <div class="info-form-group info-situa" style="grid-column:span 2;">
         <label>学情简述</label>
         <input type="text" id="f-situation" placeholder="如：学生已学过…，重难点是…，整体基础中等">
       </div>
@@ -501,18 +493,16 @@ body {
 </div>
 
 <!-- ══ 步骤导航 ══ -->
-<div class="step-nav">
+<div class="step-nav" id="stepNav">
   <button class="step-tab active" id="tab-0" onclick="switchTab(0)">单元概览</button>
   <span class="step-arrow">›</span>
-  <button class="step-tab" id="tab-1" onclick="switchTab(1)">第1课时</button>
+  <div id="lessonTabs" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;"></div>
   <span class="step-arrow">›</span>
-  <button class="step-tab" id="tab-2" onclick="switchTab(2)">第2课时</button>
-  <span class="step-arrow">›</span>
-  <button class="step-tab" id="tab-3" onclick="switchTab(3)">第3课时</button>
-  <span class="step-arrow">›</span>
-  <button class="step-tab" id="tab-4" onclick="switchTab(4)">作业与反思</button>
+  <button class="step-tab" id="tab-hw" onclick="switchTab('hw')">作业与反思</button>
+  <span style="margin:0 6px;color:var(--border);">|</span>
+  <button onclick="addLessonTab()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px dashed var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;">+ 新增课时</button>
   <div style="flex:1"></div>
-  <span style="font-size:11px;color:var(--ink-muted);font-weight:300">点击标签切换备课内容</span>
+  <span style="font-size:11px;color:var(--ink-muted);font-weight:300;white-space:nowrap;">可自由切换课时</span>
 </div>
 
 <!-- ══ 主内容区 ══ -->
@@ -551,6 +541,14 @@ body {
           <p>先在上方填写备课信息<br>然后在左侧与AI对话<br>内容会实时显示在这里</p>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 右：质检清单 -->
+  <div class="checklist-panel">
+    <div class="checklist-header">质量检查</div>
+    <div class="checklist-body" id="checklistBody">
+      <div class="checklist-empty">完成每个环节后<br>质检要点会显示在这里</div>
     </div>
   </div>
 
@@ -657,17 +655,17 @@ function confirmInfo() {
   const l  = document.getElementById('f-lessons').value;
   const si = document.getElementById('f-situation').value.trim();
 
-  if (!s || !g || !u || !l) { alert('请至少填写学科、年级、单元和课时数'); return; }
+  if (!s || !g || !u) { alert('请至少填写学科、年级和单元名称'); return; }
 
-  const unitFull = `${vo ? vo+'·' : ''}${u}`;
+  const unitFull = u;
   const textbookFull = `${tb}${vo ? ' '+vo : ''}`;
 
   ST.info = { subject:s, grade:g, textbook:textbookFull, unit:unitFull, lessons:l, situation:si };
   ST.infoConfirmed = true;
-  ST.doc.lessons = Array.from({length: parseInt(l)||3}, ()=>({name:'',objectives:'',tasks:'',process:''}));
+  ST.lessons = []; // 课时动态添加
 
   document.getElementById('infoSummary').innerHTML =
-    `<b>${s}</b> · <b>${g}</b> · ${textbookFull||'教材待填'} · <b>${unitFull}</b> · ${l}课时 · 学情：${si||'未填写'}`;
+    `<b>${s}</b> · <b>${g}</b> · ${textbookFull||'教材待填'} · <b>${vo?vo+'·':''}${unitFull}</b> · 学情：${si||'未填写'}`;
   document.getElementById('infoToggleBtn').textContent = '修改信息 ▾';
   document.getElementById('infoForm').classList.remove('open');
 
@@ -683,30 +681,61 @@ function resetInfo() {
   document.getElementById('f-unit').value = '';
 }
 
-// ══ 步骤标签 ══
+// ══ 动态课时管理 ══
+let lessonList = []; // [{id, name}]
+let lessonCounter = 0;
+
 function updateTabs() {
-  const n = parseInt(ST.info.lessons) || 3;
-  for (let i = 1; i <= 3; i++) {
-    const tab = document.getElementById(`tab-${i}`);
-    if (i <= n) {
-      tab.style.display = '';
-      tab.textContent = `第${i}课时`;
-    } else {
-      tab.style.display = 'none';
-    }
-  }
+  // 动态课时，不再依赖课时数
+  renderLessonTabs();
 }
 
-function switchTab(i) {
+function addLessonTab(customName) {
+  if (!ST.infoConfirmed) { alert('请先确认备课信息'); return; }
+  lessonCounter++;
+  const id = `lesson_${lessonCounter}`;
+  const name = customName || `第${lessonCounter}课时`;
+  lessonList.push({ id, name });
+  if (!ST.chatContexts[id]) ST.chatContexts[id] = [];
+  if (!ST.doc.lessonsMap) ST.doc.lessonsMap = {};
+  ST.doc.lessonsMap[id] = { name, objectives:'', tasks:'', process:'' };
+  renderLessonTabs();
+  switchTab(id);
+}
+
+function renderLessonTabs() {
+  const wrap = document.getElementById('lessonTabs');
+  if (!wrap) return;
+  wrap.innerHTML = lessonList.map((l, i) => `
+    <button class="step-tab ${ST.currentTab===l.id?'active':''}"
+      onclick="switchTab('${l.id}')"
+      id="tab-${l.id}"
+      style="position:relative;padding-right:22px;">
+      ${l.name}
+      <span onclick="event.stopPropagation();removeLessonTab('${l.id}')"
+        style="position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:10px;color:rgba(255,255,255,0.5);cursor:pointer;" title="删除">×</span>
+    </button>
+    ${i < lessonList.length-1 ? '<span class="step-arrow">›</span>' : ''}
+  `).join('');
+}
+
+function removeLessonTab(id) {
+  if (!confirm('确认删除这个课时？')) return;
+  lessonList = lessonList.filter(l => l.id !== id);
+  if (ST.currentTab === id) switchTab(0);
+  renderLessonTabs();
+}
+
+function switchTab(id) {
   if (!ST.infoConfirmed) { alert('请先填写并确认备课信息'); return; }
-  ST.currentTab = i;
-  ['tab-0','tab-1','tab-2','tab-3','tab-4'].forEach((id, idx) => {
-    const el = document.getElementById(id);
-    if (!el || el.style.display === 'none') return;
-    el.className = 'step-tab' + (idx === i ? ' active' : (ST.steps[idx] > 0 ? ' done' : ''));
-  });
-  // 重新渲染对话（每个tab有独立历史）
-  renderChat(i);
+  ST.currentTab = id;
+  // 更新单元概览和作业tab样式
+  document.getElementById('tab-0').className = 'step-tab' + (id===0?' active':'');
+  const hw = document.getElementById('tab-hw');
+  if(hw) hw.className = 'step-tab' + (id==='hw'?' active':'');
+  // 更新课时tab样式
+  renderLessonTabs();
+  renderChat(id);
   renderDoc();
 }
 
@@ -727,23 +756,38 @@ function renderChat(tab) {
 
 function promptForTab(tab) {
   const inf = ST.info;
-  const prompts = {
-    0: `我们现在开始设计**${inf.unit}**的单元概览。\n\n单元概览共4个环节，我们依次完成：\n\n**①** 你敢挑战吗？（大任务/大情境）\n**②** 你需要学哪些知识？（知识框架）\n**③** 期望你学会什么？（单元目标）\n**④** 给你支招（学习建议）\n\n准备好了吗？点下方按钮开始第一个环节！`,
-    1: `现在开始**第1课时**的备课。\n\n请告诉我第1课时的课题名称，或者我根据单元内容帮你推荐？`,
-    2: `现在开始**第2课时**的备课。\n\n请告诉我第2课时的课题名称，或者我根据单元内容帮你推荐？`,
-    3: `现在开始**第3课时**的备课。\n\n请告诉我第3课时的课题名称，或者我根据单元内容帮你推荐？`,
-    4: `现在开始设计**作业与反思**部分。\n\n这是学历案第三段"看山还是山"，包括：\n- 单元整体作业（巩固类、检测类、拓展类）\n- 学后反思支架（引导学生从复述→关联→转化）\n\n点下方开始生成！`
-  };
+  if (tab === 0) {
+    addBubble('ai', `我们现在开始设计「${inf.unit}」的单元概览。
 
-  const btns0 = [{ label:'开始生成①挑战情境', cls:'ok', fn:'genChallenge()' }];
-  const btns4 = [{ label:'开始生成作业与反思', cls:'ok', fn:'genHomework()' }];
-  const btnsLesson = [
-    { label:'帮我推荐课题名称', cls:'ok', fn:`suggestLessonName(${tab})` },
-    { label:'我自己输入课题', fn:'' }
-  ];
+单元概览共4个环节，依次完成：
+① 你敢挑战吗？（大任务/大情境）
+② 你需要学哪些知识？（知识框架）
+③ 期望你学会什么？（单元目标）
+④ 给你支招（学习建议）
 
-  const btns = tab === 0 ? btns0 : tab === 4 ? btns4 : btnsLesson;
-  addBubble('ai', prompts[tab], btns, true);
+准备好了吗？点下方按钮开始！`,
+      [{ label:'开始生成①挑战情境', cls:'ok', fn:'genChallenge()' }], true);
+  } else if (tab === 'hw') {
+    addBubble('ai', `现在开始设计作业与反思部分。
+
+这是学历案第三段，包括：
+• 单元整体作业（巩固类、检测类、拓展类）
+• 学后反思支架（复述→关联→转化）
+
+点下方开始生成！`,
+      [{ label:'开始生成作业与反思', cls:'ok', fn:"genHomework()" }], true);
+  } else {
+    // 课时tab
+    const lessonInfo = lessonList.find(l => l.id === tab);
+    const name = lessonInfo ? lessonInfo.name : '本课时';
+    addBubble('ai', `现在开始「${name}」的备课。
+
+请告诉我这节课的课题名称，或者我根据单元内容帮你推荐？`,
+      [
+        { label:'帮我推荐课题', cls:'ok', fn:`suggestLessonName('${tab}')` },
+        { label:'直接开始设计', fn:`genLessonDesign('${tab}')` }
+      ], true);
+  }
 }
 
 // ══ 气泡 ══
@@ -784,6 +828,29 @@ function setLoad(v) {
   document.getElementById('inp').disabled=v;
 }
 
+
+// ══ 清除Markdown符号 ══
+function cleanMD(text) {
+  return text
+    .replace(/#{1,6}\s*/g, '')        // ## 标题
+    .replace(/\*\*(.*?)\*\*/g, '$1')  // **粗体**
+    .replace(/\*(.*?)\*/g, '$1')      // *斜体*
+    .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // `代码`
+    .replace(/^[-*]\s+/gm, '• ')      // 列表符号
+    .replace(/^---+$/gm, '')           // 分割线
+    .replace(/\n{3,}/g, '\n\n')      // 多余空行
+    .trim();
+}
+
+// ══ 更新质检清单 ══
+function updateChecklist(items) {
+  const body = document.getElementById('checklistBody');
+  if (!body || !items || !items.length) return;
+  body.innerHTML = items.map(item =>
+    `<div class="checklist-item">✓ ${item}</div>`
+  ).join('');
+}
+
 // ══ API ══
 async function callAI(userText, tab) {
   const ctx = ST.chatContexts[tab];
@@ -813,7 +880,7 @@ async function callAI(userText, tab) {
     throw new Error(errMsg);
   }
   const data = await r.json();
-  const reply = data.content[0].text;
+  const reply = cleanMD(data.content[0].text);
   ST.chatContexts[tab].push({role:'user', content:userText});
   ST.chatContexts[tab].push({role:'assistant', content:reply, _display:{text:reply}});
   return reply;
@@ -933,7 +1000,7 @@ async function suggestLessonName(tab) {
 }
 
 async function genLessonDesign(tab) {
-  const lessonIdx = tab - 1;
+  const lessonIdx = tab;
   setLoad(true); showTyping();
   try {
     const reply = await callAI(
@@ -942,13 +1009,14 @@ async function genLessonDesign(tab) {
     );
     hideTyping();
     // 解析并存储
-    ST.doc.lessons[lessonIdx] = ST.doc.lessons[lessonIdx] || {};
-    ST.doc.lessons[lessonIdx].process = reply;
+    if (!ST.doc.lessonsMap) ST.doc.lessonsMap = {};
+    if (!ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab] = {};
+    ST.doc.lessonsMap[tab].process = reply;
     ST.steps[tab] = 1;
     renderDoc();
     addBubble('ai', reply, [
-      {label:'✓ 框架满意，细化内容', cls:'g', fn:`refineLessonDesign(${tab})`},
-      {label:'重新生成', fn:`genLessonDesign(${tab})`},
+      {label:'✓ 框架满意，细化内容', cls:'g', fn:`refineLessonDesign('${tab}')`},
+      {label:'重新生成', fn:`genLessonDesign('${tab}')`},
       {label:'告诉我修改意见', fn:''}
     ]);
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
@@ -964,7 +1032,7 @@ async function refineLessonDesign(tab) {
       tab
     );
     hideTyping();
-    ST.doc.lessons[lessonIdx].process = reply;
+    if (ST.doc.lessonsMap && ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab].process = reply;
     renderDoc();
     addBubble('ai', reply, [
       {label:'✓ 完成，继续下一课时', cls:'g', fn:`switchTab(${tab+1<4?tab+1:4})`},
@@ -1013,14 +1081,20 @@ function renderDoc() {
   if (d.objectives) h += sec('单元概览 · 03','期望你学会什么？', d.objectives);
   if (d.tips) h += sec('单元概览 · 04','给你支招', d.tips);
 
-  d.lessons.forEach((l,i)=>{
-    if(!l.process) return;
-    h += `<div class="doc-sec">
-      <div class="doc-sec-lbl">分课时学历案 · 第${i+1}课时</div>
-      <div class="doc-sec-title">${l.name||'第'+(i+1)+'课时'}</div>
-      <div class="doc-sec-body">${l.process}</div>
-    </div>`;
-  });
+  if (ST.doc.lessonsMap) {
+    lessonList.forEach((ll) => {
+      const l = ST.doc.lessonsMap[ll.id];
+      if (!l || !l.process) return;
+      h += `<div class="doc-sec">
+        <div class="doc-sec-lbl">分课时学历案</div>
+        <div class="doc-sec-title">${ll.name}</div>
+        ${l.objectives?`<div class="doc-sec-lbl" style="margin-top:10px">课时目标</div><div class="doc-sec-body">${l.objectives}</div>`:''}
+        ${l.tasks?`<div class="doc-sec-lbl" style="margin-top:10px">评价任务</div><div class="doc-sec-body">${l.tasks}</div>`:''}
+        <div class="doc-sec-lbl" style="margin-top:10px">学习过程</div>
+        <div class="doc-sec-body">${l.process}</div>
+      </div>`;
+    });
+  }
 
   if (d.homework) h += sec('第三部分','作业与反思', d.homework);
 
@@ -1043,8 +1117,12 @@ function sec(lbl, title, body) {
 
 // ══ 开始对话 ══
 function startChat() {
-  ST.chatContexts = { 0:[], 1:[], 2:[], 3:[], 4:[] };
-  ST.steps = { 0:0, 1:0, 2:0, 3:0, 4:0 };
+  ST.chatContexts = { 0:[], hw:[] };
+  ST.steps = {};
+  ST.doc.lessonsMap = {};
+  lessonList = [];
+  lessonCounter = 0;
+  renderLessonTabs();
   renderDoc();
   switchTab(0);
 }
