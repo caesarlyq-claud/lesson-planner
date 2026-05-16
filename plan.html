@@ -1100,7 +1100,7 @@ function addBubble(role, text, btns=[], save=false) {
     <div class="msg-av">${role==='ai'?'学':'师'}</div>
     <div class="msg-body">
       <div class="msg-bub">${fmt(text)}</div>
-      ${btns.length?`<div class="btn-area">${btns.map(b=>`<button class="btn-q ${b.cls||''}" onclick="${b.fn}">${b.label}</button>`).join('')}</div>`:''}
+      ${btns.length?`<div class="btn-area">${btns.map(b=>`<button class="btn-q ${b.cls||''}" onclick="${b.fn.replace(/"/g, "'")}">${b.label}</button>`).join('')}</div>`:''}
     </div>`;
   w.appendChild(d);
   w.scrollTop = w.scrollHeight;
