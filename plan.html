@@ -942,30 +942,39 @@ function showLessonSelector(tab) {
 
   let selectHtml = '';
   if (options.length > 0) {
+    // 把options存到全局供onLessonSelect读取课时数
+    window['_lessonOptions_' + tab] = options;
     selectHtml = `
       <div style="margin-top:10px;">
-        <div style="font-size:11px;color:var(--ink-muted);margin-bottom:6px;font-weight:400;">
-          从单元课时中选择，或直接输入课题名称：
-        </div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-bottom:5px;font-weight:400;">第一步：选择课文</div>
         <select id="lesson-select-${tab}"
           style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
           background:#fff;font-size:13px;font-family:sans-serif;
           color:var(--ink);outline:none;margin-bottom:8px;cursor:pointer;"
           onchange="onLessonSelect('${tab}', this.value)">
-          <option value="">— 请选择课时 —</option>
-          ${options.map(o => '<option value="' + o.name + '">' + o.name + (o.lessons ? '（' + o.lessons + '）' : '') + '</option>').join('')}
+          <option value="">— 请选择课文 —</option>
+          ${options.map(o => '<option value="' + o.name + '" data-lessons="' + (o.lessons||'') + '">' + o.name + (o.lessons ? '（' + o.lessons + '）' : '') + '</option>').join('')}
           <option value="__custom__">✏️ 自行输入课题名称</option>
         </select>
+        <div id="lesson-num-wrap-${tab}" style="display:none;margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--ink-muted);margin-bottom:5px;font-weight:400;">第二步：选择第几课时</div>
+          <select id="lesson-num-${tab}"
+            style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
+            background:#fff;font-size:13px;font-family:sans-serif;color:var(--ink);outline:none;cursor:pointer;">
+            <option value="1">第一课时</option>
+          </select>
+        </div>
         <div id="custom-input-${tab}" style="display:none;margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--ink-muted);margin-bottom:5px;font-weight:400;">输入课题名称</div>
           <input type="text" id="custom-name-${tab}"
-            placeholder="输入课题名称，如：古诗三首"
+            placeholder="如：古诗三首·第一课时"
             style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
             background:#fff;font-size:13px;font-family:sans-serif;color:var(--ink);outline:none;">
         </div>
         <button id="confirm-btn-${tab}" onclick="confirmLessonName('${tab}')"
           style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;
-          border-radius:7px;font-size:13px;font-family:sans-serif;cursor:pointer;">
-          确认课题，开始备课 →
+          border-radius:7px;font-size:13px;font-family:sans-serif;cursor:pointer;margin-top:4px;">
+          确认，开始备课 →
         </button>
       </div>`;
   } else {
@@ -1001,29 +1010,67 @@ function showLessonSelector(tab) {
 }
 
 function onLessonSelect(tab, value) {
-  const customDiv = document.getElementById(`custom-input-${tab}`);
+  const customDiv = document.getElementById('custom-input-' + tab);
+  const numWrap = document.getElementById('lesson-num-wrap-' + tab);
+  const numSelect = document.getElementById('lesson-num-' + tab);
+
   if (value === '__custom__') {
     if (customDiv) customDiv.style.display = 'block';
-    document.getElementById(`custom-name-${tab}`)?.focus();
+    if (numWrap) numWrap.style.display = 'none';
+    document.getElementById('custom-name-' + tab)?.focus();
+  } else if (value) {
+    if (customDiv) customDiv.style.display = 'none';
+    // 根据课时数生成第几课时选项
+    if (numWrap && numSelect) {
+      // 从option的data-lessons属性读取课时数
+      const sel = document.getElementById('lesson-select-' + tab);
+      const selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
+      const lessonsStr = selectedOpt ? (selectedOpt.getAttribute('data-lessons') || '1课时') : '1课时';
+      const count = parseInt(lessonsStr) || 1;
+      // 生成选项
+      numSelect.innerHTML = '';
+      const labels = ['第一课时', '第二课时', '第三课时', '第四课时'];
+      for (let i = 0; i < count; i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i + 1);
+        opt.textContent = labels[i] || ('第' + (i+1) + '课时');
+        numSelect.appendChild(opt);
+      }
+      // 只有多课时才显示选择器
+      numWrap.style.display = count > 1 ? 'block' : 'none';
+    }
   } else {
     if (customDiv) customDiv.style.display = 'none';
+    if (numWrap) numWrap.style.display = 'none';
   }
 }
 
 function confirmLessonName(tab) {
-  const select = document.getElementById(`lesson-select-${tab}`);
-  const customInput = document.getElementById(`custom-name-${tab}`);
+  const select = document.getElementById('lesson-select-' + tab);
+  const customInput = document.getElementById('custom-name-' + tab);
+  const numSelect = document.getElementById('lesson-num-' + tab);
+  const numWrap = document.getElementById('lesson-num-wrap-' + tab);
 
   let name = '';
-  if (select) {
-    name = select.value === '__custom__' || !select.value
-      ? (customInput?.value.trim() || '')
-      : select.value;
+  if (select && select.value === '__custom__') {
+    // 自行输入
+    name = customInput?.value.trim() || '';
+  } else if (select && select.value) {
+    // 课文名称 + 第几课时
+    const courseName = select.value;
+    const numVisible = numWrap && numWrap.style.display !== 'none';
+    if (numVisible && numSelect && numSelect.value) {
+      const labels = ['第一课时', '第二课时', '第三课时', '第四课时'];
+      const numLabel = labels[parseInt(numSelect.value) - 1] || ('第' + numSelect.value + '课时');
+      name = courseName + '·' + numLabel;
+    } else {
+      name = courseName + '·第一课时';
+    }
   } else {
     name = customInput?.value.trim() || '';
   }
 
-  if (!name) { alert('请选择或输入课题名称'); return; }
+  if (!name) { alert('请选择课文或输入课题名称'); return; }
 
   // 更新课时名称
   const lesson = lessonList.find(l => l.id === tab);
@@ -1036,7 +1083,7 @@ function confirmLessonName(tab) {
   renderLessonTabs();
 
   // 移除选择器，显示确认信息
-  const sel = document.getElementById(`lesson-selector-${tab}`);
+  const sel = document.getElementById('lesson-selector-' + tab);
   if (sel) sel.remove();
 
   addBubble('ai', '好的，现在开始备「' + name + '」的课时学历案。\n\n将依次完成：\n① 课时目标\n② 评价任务\n③ 学习过程（热身→任务串→本课小结）', [
