@@ -712,30 +712,25 @@ const CFG = {
   url:    'https://api.anthropic.com/v1/messages'
 };
 
-const SYS = `你是一位专业的单元学历案备课助手，基于华东师范大学崔允漷团队的学历案理论框架。
-
-【最重要的输出格式规则】
-每次生成学历案内容时，必须严格用以下格式输出，不得省略分隔符：
-
-[对话]
-（此处写给教师看的简短说明或问题，不超过30字，不含学历案正文）
-[正文]
-（此处只写纯净的学历案正文内容，不含标题名称、不含字数统计、不含"是否满意"等对话语句、不含任何括号说明）
-[结束]
-
-违反此格式将导致文档区显示混乱，务必严格遵守。
-
-【核心原则】
-1. 学生立场：所有目标、任务、过程的主语都是学生
-2. 逆向设计：学习目标→评价任务→学习过程
-3. 教-学-评一致性：三者严格对应
-
-【各环节标准】
-"你敢挑战吗？"：真实情境+明确任务，2/3学生有挑战，简洁通俗，150字内。
-"期望你学会什么？"：3-5条，主语学生，三维句法"通过…学会…形成…"，可测可评，至少两个核心素养。
-课时学习过程：热身→任务环节1-3→本课小结，体现进阶，嵌入评价，只写学生做什么。
-作业：巩固类（必做）、综合应用类（必做）、拓展提高类（选做）。
-反思：复述→关联→转化，单元反思需达到关联以上。`;
+const SYS = '你是一位专业的单元学历案备课助手，基于华东师范大学崔允漷团队的学历案理论框架。\n\n' +
+  '【最重要的输出格式规则】\n' +
+  '每次生成学历案内容时，必须严格用以下格式输出：\n\n' +
+  '===对话===\n' +
+  '（此处写给教师看的简短说明或问题，不超过30字，不含学历案正文）\n' +
+  '===正文===\n' +
+  '（此处只写纯净的学历案正文内容，不含标题名称、不含字数统计、不含对话语句）\n' +
+  '===结束===\n\n' +
+  '违反此格式将导致文档区显示混乱，务必严格遵守。\n\n' +
+  '【核心原则】\n' +
+  '1. 学生立场：所有目标、任务、过程的主语都是学生\n' +
+  '2. 逆向设计：学习目标→评价任务→学习过程\n' +
+  '3. 教-学-评一致性：三者严格对应\n\n' +
+  '【各环节标准】\n' +
+  '"你敢挑战吗？"：真实情境+明确任务，2/3学生有挑战，简洁通俗，150字内。\n' +
+  '"期望你学会什么？"：3-5条，主语学生，三维句法"通过…学会…形成…"，可测可评，至少两个核心素养。\n' +
+  '课时学习过程：热身→任务环节1-3→本课小结，体现进阶，嵌入评价，只写学生做什么。\n' +
+  '作业：巩固类（必做）、综合应用类（必做）、拓展提高类（选做）。\n' +
+  '反思：复述→关联→转化，单元反思需达到关联以上。';
 
 // ══ 状态 ══
 const ST = {
@@ -954,26 +949,22 @@ function showLessonSelector(tab) {
         </div>
         <select id="lesson-select-${tab}"
           style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
-          background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;
+          background:#fff;font-size:13px;font-family:sans-serif;
           color:var(--ink);outline:none;margin-bottom:8px;cursor:pointer;"
           onchange="onLessonSelect('${tab}', this.value)">
           <option value="">— 请选择课时 —</option>
-          ${options.map(o => `<option value="${o.name}">${o.name}${o.lessons ? '（'+o.lessons+'）' : ''}</option>`).join('')}
+          ${options.map(o => '<option value="' + o.name + '">' + o.name + (o.lessons ? '（' + o.lessons + '）' : '') + '</option>').join('')}
           <option value="__custom__">✏️ 自行输入课题名称</option>
         </select>
         <div id="custom-input-${tab}" style="display:none;margin-bottom:8px;">
           <input type="text" id="custom-name-${tab}"
-            placeholder="输入课题名称，如：《古诗三首》"
+            placeholder="输入课题名称，如：古诗三首"
             style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
-            background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;color:var(--ink);outline:none;"
-            onkeydown="if(event.key==='Enter')confirmLessonName('${tab}')">
+            background:#fff;font-size:13px;font-family:sans-serif;color:var(--ink);outline:none;">
         </div>
-        <button onclick="confirmLessonName('${tab}')"
+        <button id="confirm-btn-${tab}" onclick="confirmLessonName('${tab}')"
           style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;
-          border-radius:7px;font-size:13px;font-family:'Noto Sans SC',sans-serif;
-          cursor:pointer;transition:background 0.2s;"
-          onmouseover="this.style.background='var(--accent)'"
-          onmouseout="this.style.background='var(--ink)'">
+          border-radius:7px;font-size:13px;font-family:sans-serif;cursor:pointer;">
           确认课题，开始备课 →
         </button>
       </div>`;
@@ -985,16 +976,13 @@ function showLessonSelector(tab) {
           请输入本课时的课题名称：
         </div>
         <input type="text" id="custom-name-${tab}"
-          placeholder="如：《古诗三首》第一课时"
+          placeholder="如：古诗三首 第一课时"
           style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
-          background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;color:var(--ink);
-          outline:none;margin-bottom:8px;"
-          onkeydown="if(event.key==='Enter')confirmLessonName('${tab}')">
-        <button onclick="confirmLessonName('${tab}')"
+          background:#fff;font-size:13px;font-family:sans-serif;color:var(--ink);
+          outline:none;margin-bottom:8px;">
+        <button id="confirm-btn-${tab}" onclick="confirmLessonName('${tab}')"
           style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;
-          border-radius:7px;font-size:13px;font-family:'Noto Sans SC',sans-serif;cursor:pointer;"
-          onmouseover="this.style.background='var(--accent)'"
-          onmouseout="this.style.background='var(--ink)'">
+          border-radius:7px;font-size:13px;font-family:sans-serif;cursor:pointer;">
           确认课题，开始备课 →
         </button>
       </div>`;
@@ -1051,13 +1039,8 @@ function confirmLessonName(tab) {
   const sel = document.getElementById(`lesson-selector-${tab}`);
   if (sel) sel.remove();
 
-  addBubble('ai', `好的，现在开始备「${name}」的课时学历案。
-
-将依次完成：
-① 课时目标
-② 评价任务
-③ 学习过程（热身→任务串→本课小结）`, [
-    { label:'开始生成课时学历案', cls:'g', fn:`genLessonDesign('${tab}')` }
+  addBubble('ai', '好的，现在开始备「' + name + '」的课时学历案。\n\n将依次完成：\n① 课时目标\n② 评价任务\n③ 学习过程（热身→任务串→本课小结）', [
+    { label:'开始生成课时学历案', cls:'g', fn:'genLessonDesign("' + tab + '")' }
   ]);
 }
 
@@ -1170,18 +1153,18 @@ function showChecklist(type) {
   const w = document.getElementById('msgs');
   const d = document.createElement('div');
   d.className = 'msg ai';
-  d.innerHTML = `
-    <div class="msg-av">学</div>
-    <div class="msg-body" style="max-width:310px;">
-      <div class="checklist-bubble">
-        <div class="checklist-bubble-title">📋 ${cl.title}</div>
-        ${cl.items.map((item, i) => `
-          <div class="checklist-bubble-item">
-            <div class="checklist-bubble-num">${i+1}</div>
-            <span>${item}</span>
-          </div>`).join('')}
-      </div>
-    </div>`;
+
+  const itemsHtml = cl.items.map(function(item, i) {
+    return '<div class="checklist-bubble-item"><div class="checklist-bubble-num">' + (i+1) + '</div><span>' + item + '</span></div>';
+  }).join('');
+
+  d.innerHTML = '<div class="msg-av">学</div>' +
+    '<div class="msg-body" style="max-width:310px;">' +
+    '<div class="checklist-bubble">' +
+    '<div class="checklist-bubble-title">📋 ' + cl.title + '</div>' +
+    itemsHtml +
+    '</div></div>';
+
   w.appendChild(d);
   w.scrollTop = w.scrollHeight;
 }
@@ -1205,8 +1188,8 @@ function cleanMD(text) {
 // ══ API ══
 // 解析结构化输出，分离对话和正文
 function parseReply(raw) {
-  const dialogMatch = raw.match(/\[对话\]([\s\S]*?)\[正文\]/);
-  const contentMatch = raw.match(/\[正文\]([\s\S]*?)\[结束\]/);
+  const dialogMatch = raw.match(/===对话===([\.\s\S]*?)===正文===/m);
+  const contentMatch = raw.match(/===正文===([\.\s\S]*?)===结束===/m);
   if (dialogMatch && contentMatch) {
     return {
       dialog:  cleanMD(dialogMatch[1].trim()),
@@ -1304,31 +1287,37 @@ async function genKnowledge() {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      `请生成本单元"你需要学哪些知识？"的课时结构图。
-
-要求：
-- unitTheme 与"你敢挑战吗？"的大任务紧密呼应，是完成大任务需要的能力路径（如"观察事物·学会描写"），不是具体知识点罗列
-- abilityStart 用一句话描述学生已有的起点能力
-- 每个branch只写课文/课时名称和课时数，不写具体任务，不写素养目标
-- 课时数量控制在3-6个
-
-在[正文]部分，严格输出以下JSON（不含其他内容）：
-{
-  "unitTheme": "与大任务呼应的能力路径（8字以内）",
-  "abilityStart": "学生已有基础一句话",
-  "branches": [
-    { "name": "课文/课时名称", "lessons": "X课时" }
-  ]
-}
-
-在[对话]部分，一句话说明课时安排逻辑。`,
+      '请生成本单元"你需要学哪些知识？"的课时结构图。\n\n' +
+      '要求：\n' +
+      '- unitTheme 与"你敢挑战吗？"的大任务紧密呼应，是完成大任务需要的能力路径（如"观察事物·学会描写"），不是具体知识点罗列\n' +
+      '- abilityStart 用一句话描述学生已有的起点能力\n' +
+      '- 每个branch只写课文/课时名称和课时数，不写具体任务，不写素养目标\n' +
+      '- 课时数量控制在3-6个\n\n' +
+      '在[正文]部分，严格输出以下JSON（不含其他内容，不要用```包裹，直接输出裸JSON）：\n' +
+      '{\n' +
+      '  "unitTheme": "与大任务呼应的能力路径（8字以内）",\n' +
+      '  "abilityStart": "学生已有基础一句话",\n' +
+      '  "branches": [\n' +
+      '    { "name": "课文/课时名称", "lessons": "X课时" }\n' +
+      '  ]\n' +
+      '}\n\n' +
+      '在[对话]部分，一句话说明课时安排逻辑。',
       ST.currentTab
     );
     hideTyping();
     if (parsed.content) {
       try {
-        const knData = JSON.parse(parsed.content);
-        ST.doc.knowledge = parsed.content;
+        // 清理AI可能附加的 ```json ``` 包裹
+        let raw = parsed.content.trim();
+        raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+        // 提取第一个 { 到最后一个 } 之间的内容
+        const start = raw.indexOf('{');
+        const end = raw.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          raw = raw.slice(start, end + 1);
+        }
+        const knData = JSON.parse(raw);
+        ST.doc.knowledge = raw;
         ST.doc.knowledgeData = knData;
       } catch(e) {
         ST.doc.knowledge = parsed.content;
@@ -1396,7 +1385,7 @@ async function suggestLessonName(tab) {
     hideTyping();
     addBubble('ai', reply, [
       {label:'选择后告诉我课题名称', fn:''},
-      {label:'开始生成课时设计', cls:'g', fn:`genLessonDesign(${tab})`}
+      {label:'开始生成课时设计', cls:'g', fn:'genLessonDesign("' + tab + '")'}
     ]);
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
   setLoad(false);
@@ -1415,8 +1404,8 @@ async function genLessonDesign(tab) {
     if (parsed.content) { ST.doc.lessonsMap[tab].process = parsed.content; renderDoc(); }
     ST.steps[tab] = 1;
     addBubble('ai', parsed.dialog || '已生成课时框架，请查看右侧预览。', [
-      {label:'✓ 框架满意，细化内容', cls:'g', fn:`refineLessonDesign('${tab}')`},
-      {label:'重新生成', fn:`genLessonDesign('${tab}')`},
+      {label:'✓ 框架满意，细化内容', cls:'g', fn:'refineLessonDesign("' + tab + '")'},
+      {label:'重新生成', fn:'genLessonDesign("' + tab + '")'},
       {label:'告诉我修改意见', fn:''}
     ]);
     showChecklist('lesson');
@@ -1438,7 +1427,7 @@ async function refineLessonDesign(tab) {
     }
     addBubble('ai', parsed.dialog || '课时学历案已细化，请查看右侧预览。', [
       {label:'✓ 完成，新增下一课时', cls:'g', fn:'addLessonTab()'},
-      {label:'重新细化', fn:`refineLessonDesign('${tab}')`},
+      {label:'重新细化', fn:'refineLessonDesign("' + tab + '")'},
       {label:'告诉我修改意见', fn:''}
     ]);
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
