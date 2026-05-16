@@ -1329,7 +1329,22 @@ function renderLessonProcess(text) {
 
 // ══ 清除Markdown符号 ══
 function cleanMD(text) {
-  return text
+  if (!text) return '';
+  let t = text;
+  // 如果内容看起来是JSON，尝试提取有用信息
+  if (t.trim().startsWith('{') || t.trim().startsWith('[')) {
+    try {
+      const obj = JSON.parse(t.trim());
+      // 如果是数组，提取文本
+      if (Array.isArray(obj)) return obj.join('\n');
+      // 如果有特定字段，提取
+      if (obj.unitGoals) return obj.unitGoals.join('\n');
+      if (obj.goals) return obj.goals.join('\n');
+    } catch(e) {}
+    // 无法解析JSON，去掉大括号和引号
+    t = t.replace(/[{}\[\]"]/g, '').replace(/,\s*$/gm, '').trim();
+  }
+  return t
     .replace(/#{1,6}\s*/g, '')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
@@ -1497,7 +1512,7 @@ async function genObjectives() {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      `请生成"期望你学会什么？"（单元学习目标）。3-5条，主语是学生，三维句法"通过…学会…形成…"，结果可测可评，至少两个核心素养，难度保证2/3学生能达成。`,
+      '请生成"期望你学会什么？"（单元学习目标）。\n\n要求：\n- 直接输出3-5条目标，每条单独一行\n- 主语是学生，三维句法"通过…学会…形成…"\n- 结果可测可评，至少两个核心素养\n- 难度保证2/3学生能达成\n- 不要用JSON格式，不要编号标签，直接输出目标文字',
       ST.currentTab
     );
     hideTyping();
@@ -1553,27 +1568,35 @@ async function genLessonDesign(tab) {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      '请生成这个课时的学历案框架，包含三个部分：\n\n' +
-      '【课时目标】2-4条，对接单元目标，可指标化\n\n' +
-      '【评价任务】与每条目标对应，表现性评价为主\n\n' +
-      '【学习过程】按以下结构输出（先给骨架，不用展开活动细节）：\n' +
-      '热身（X分钟）：一句话说明热身内容\n' +
+      '请根据已知的课时信息，直接生成这个课时的学历案框架，不要询问课时数量。\n\n' +
+      '请按以下结构输出：\n\n' +
+      '【课时目标】\n' +
+      '（2-4条，对接单元目标，每条换行）\n\n' +
+      '【评价任务】\n' +
+      '（与目标一一对应，表现性评价）\n\n' +
+      '【学习过程】\n' +
+      '热身（X分钟）：……\n' +
       '任务一：任务名称（X分钟）\n' +
-      '  活动1：\n' +
-      '  活动2：\n' +
+      '活动1：……\n' +
+      '活动2：……\n' +
       '任务二：任务名称（X分钟）\n' +
-      '  活动1：\n' +
-      '  活动2：\n' +
-      '任务三：任务名称（X分钟）\n' +
-      '  活动1：\n' +
-      '本课小结（X分钟）：\n\n' +
-      '注意：任务是一级概念，贯穿学习主线；活动是任务下的具体操作步骤。只写学生做什么，不写教师做什么。',
+      '活动1：……\n' +
+      '活动2：……\n' +
+      '本课小结（X分钟）：……\n\n' +
+      '注意：直接生成内容，不要询问任何问题。任务是一级，活动是二级。只写学生做什么。',
       tab
     );
     hideTyping();
     if (!ST.doc.lessonsMap) ST.doc.lessonsMap = {};
     if (!ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab] = {};
-    if (parsed.content) { ST.doc.lessonsMap[tab].process = parsed.content; renderDoc(); }
+    // 验证是有效的课时内容（包含热身或任务关键词）
+    const validContent = parsed.content && (
+      parsed.content.includes('热身') ||
+      parsed.content.includes('任务一') ||
+      parsed.content.includes('任务二') ||
+      parsed.content.includes('课时目标')
+    );
+    if (validContent) { ST.doc.lessonsMap[tab].process = parsed.content; renderDoc(); }
     ST.steps[tab] = 1;
     addBubble('ai', parsed.dialog || '已生成课时框架，请查看右侧预览。', [
       {label:'✓ 框架满意，细化内容', cls:'g', fn:'refineLessonDesign("' + tab + '")'},
