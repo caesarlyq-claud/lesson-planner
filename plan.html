@@ -553,26 +553,30 @@ const CFG = {
   url:    'https://api.anthropic.com/v1/messages'
 };
 
-const SYS = `你是一位专业的单元学历案备课助手，基于华东师范大学崔允漷团队的学历案理论框架，帮助教师设计以学生为中心、指向核心素养的单元教学方案。
+const SYS = `你是一位专业的单元学历案备课助手，基于华东师范大学崔允漷团队的学历案理论框架。
 
-核心原则：
+【最重要的输出格式规则】
+每次生成学历案内容时，必须严格用以下格式输出，不得省略分隔符：
+
+[对话]
+（此处写给教师看的简短说明或问题，不超过30字，不含学历案正文）
+[正文]
+（此处只写纯净的学历案正文内容，不含标题名称、不含字数统计、不含"是否满意"等对话语句、不含任何括号说明）
+[结束]
+
+违反此格式将导致文档区显示混乱，务必严格遵守。
+
+【核心原则】
 1. 学生立场：所有目标、任务、过程的主语都是学生
 2. 逆向设计：学习目标→评价任务→学习过程
 3. 教-学-评一致性：三者严格对应
-4. 每步生成后等待教师确认
 
-学历案结构：
-- 看山是山：单元概览（挑战情境、知识框架、单元目标、学习支招）
-- 看山不是山：分课时学历案（课时目标、评价任务、学习过程）
-- 看山还是山：作业与检测、学后反思
-
+【各环节标准】
 "你敢挑战吗？"：真实情境+明确任务，2/3学生有挑战，简洁通俗，150字内。
-单元目标：3-5条，主语学生，三维句法"通过…学会…形成…"，可测可评，至少两个核心素养。
-课时学习过程：热身→任务环节1-3→本课小结，体现进阶，嵌入评价，只写学生做什么，每个活动预设时间。
+"期望你学会什么？"：3-5条，主语学生，三维句法"通过…学会…形成…"，可测可评，至少两个核心素养。
+课时学习过程：热身→任务环节1-3→本课小结，体现进阶，嵌入评价，只写学生做什么。
 作业：巩固类（必做）、综合应用类（必做）、拓展提高类（选做）。
-反思三阶：复述→关联→转化，单元反思需达到关联以上。
-
-生成内容后直接询问是否满意或需要修改。语言专业友好，像有经验的教研员在协作备课。回复简洁，不超过300字。`;
+反思：复述→关联→转化，单元反思需达到关联以上。`;
 
 // ══ 状态 ══
 const ST = {
@@ -829,12 +833,28 @@ function cleanMD(text) {
 
 
 // ══ API ══
+// 解析结构化输出，分离对话和正文
+function parseReply(raw) {
+  const dialogMatch = raw.match(/\[对话\]([\s\S]*?)\[正文\]/);
+  const contentMatch = raw.match(/\[正文\]([\s\S]*?)\[结束\]/);
+  if (dialogMatch && contentMatch) {
+    return {
+      dialog:  cleanMD(dialogMatch[1].trim()),
+      content: cleanMD(contentMatch[1].trim())
+    };
+  }
+  // 未按格式输出时，全部作为对话
+  return { dialog: cleanMD(raw), content: '' };
+}
+
 async function callAI(userText, tab) {
-  const ctx = ST.chatContexts[tab];
-  const msgs = ctx.filter(m=>m.role && (m.role==='user'||m.role==='assistant')).map(m=>({ role:m.role==='ai'?'assistant':m.role, content:m.content||m._display?.text||'' }));
+  const ctx = ST.chatContexts[tab] || [];
+  const msgs = ctx
+    .filter(m => m.role && (m.role==='user' || m.role==='assistant'))
+    .map(m => ({ role: m.role==='ai'?'assistant':m.role, content: m.content || m._display?.text || '' }));
   msgs.push({ role:'user', content: userText });
 
-  const infoCtx = `【当前备课信息】学科：${ST.info.subject}，年级：${ST.info.grade}，教材：${ST.info.textbook}，单元：${ST.info.unit}，课时数：${ST.info.lessons}，学情：${ST.info.situation}`;
+  const infoCtx = `【当前备课信息】学科：${ST.info.subject}，年级：${ST.info.grade}，教材：${ST.info.textbook}，单元：${ST.info.unit}，学情：${ST.info.situation||'未填写'}`;
 
   const r = await fetch(CFG.url, {
     method:'POST',
@@ -857,10 +877,11 @@ async function callAI(userText, tab) {
     throw new Error(errMsg);
   }
   const data = await r.json();
-  const reply = cleanMD(data.content[0].text);
-  ST.chatContexts[tab].push({role:'user', content:userText});
-  ST.chatContexts[tab].push({role:'assistant', content:reply, _display:{text:reply}});
-  return reply;
+  const parsed = parseReply(data.content[0].text);
+  // 只把对话部分存入历史（不存正文，避免污染上下文）
+  ST.chatContexts[tab].push({role:'user', content: userText});
+  ST.chatContexts[tab].push({role:'assistant', content: parsed.dialog, _display:{text: parsed.dialog}});
+  return parsed;
 }
 
 // ══ 用户发送 ══
@@ -873,9 +894,9 @@ async function sendMsg() {
   ST.chatContexts[ST.currentTab].push({role:'user', content:t, _display:{text:t}});
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(t, ST.currentTab);
+    const parsed = await callAI(t, ST.currentTab);
     hideTyping();
-    addBubble('ai', reply, [], false);
+    addBubble('ai', parsed.dialog || parsed.content || '...', [], false);
     // 更新对话记录中最后一条
   } catch(e){ hideTyping(); addBubble('ai',`❌ 出错：${e.message}`); }
   setLoad(false);
@@ -904,14 +925,13 @@ async function genChallenge() {
 async function genKnowledge() {
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `挑战情境已确认。请生成"你需要学哪些知识？"——用文字描述本单元知识结构和各课时安排，体现各部分的逻辑关系，整体感强，不要太细节。生成后直接询问是否满意。`,
+    const parsed = await callAI(
+      `请生成"你需要学哪些知识？"——描述本单元知识结构和各课时安排，体现逻辑关系，整体感强，不要太细节。`,
       ST.currentTab
     );
     hideTyping();
-    ST.doc.knowledge = reply;
-    renderDoc();
-    addBubble('ai', reply, [
+    if (parsed.content) { ST.doc.knowledge = parsed.content; renderDoc(); }
+    addBubble('ai', parsed.dialog || '已生成知识框架，请查看右侧预览。', [
       {label:'✓ 满意，生成③单元目标', cls:'g', fn:'genObjectives()'},
       {label:'重新生成', fn:'genKnowledge()'},
       {label:'告诉我修改意见', fn:''}
@@ -1024,16 +1044,18 @@ async function refineLessonDesign(tab) {
 async function genHomework() {
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `请生成本单元的作业与检测，以及学后反思支架。\n\n作业设计：以单元为整体，分三类：\n1. 巩固类（必做）：基础知识操练\n2. 综合应用类（必做）：真实情境中综合运用\n3. 拓展提高类（选做）：明确标注"选做"\n\n学后反思：设计引导学生从"复述"→"关联"→"转化"的反思支架（三阶六级），单元反思需达到关联以上。\n\n生成后直接询问是否满意。`,
+    const parsed = await callAI(
+      `请生成本单元的作业与检测及学后反思支架。作业分三类：1.巩固类（必做）2.综合应用类（必做）3.拓展提高类（选做）。学后反思设计复述→关联→转化三阶支架。`,
       ST.currentTab
     );
     hideTyping();
-    ST.doc.homework = reply;
-    ST.doc.reflection = reply;
+    if (parsed.content) {
+      ST.doc.homework = parsed.content;
+      ST.doc.reflection = parsed.content;
+      renderDoc();
+    }
     ST.steps[4] = 1;
-    renderDoc();
-    addBubble('ai', reply, [
+    addBubble('ai', parsed.dialog || '作业与反思已生成，请查看右侧预览。', [
       {label:'✓ 完成！查看完整文档', cls:'g', fn:''},
       {label:'重新生成', fn:'genHomework()'},
       {label:'告诉我修改意见', fn:''}
