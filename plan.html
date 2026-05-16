@@ -401,6 +401,27 @@ body {
 .doc-sec-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); font-weight: 500; margin-bottom: 4px; }
 .doc-sec-title { font-family: 'Noto Serif SC', serif; font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 0.6rem; padding-left: 9px; border-left: 3px solid var(--gold); }
 .doc-sec-body { font-size: 13px; line-height: 2; color: var(--ink-light); font-weight: 300; white-space: pre-wrap; }
+.doc-challenge-body {
+  font-size: 14px;
+  line-height: 2.1;
+  color: var(--ink);
+  font-weight: 300;
+  font-family: 'Noto Serif SC', serif;
+  padding: 1.2rem 1.4rem;
+  background: linear-gradient(135deg, #fffdf8 0%, #f9f6f0 100%);
+  border-radius: 8px;
+  border-left: 4px solid var(--gold);
+  position: relative;
+}
+.doc-challenge-body::before {
+  content: '❝';
+  position: absolute;
+  top: 8px; left: 10px;
+  font-size: 24px;
+  color: var(--gold);
+  opacity: 0.4;
+  font-family: serif;
+}
 
 .doc-empty { text-align: center; padding: 3.5rem 2rem; color: var(--ink-muted); }
 
@@ -1128,7 +1149,15 @@ async function genChallenge() {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      `请生成"你敢挑战吗？"部分。要求：创设真实情境，任务明确，对2/3学生有挑战，语言简洁通俗，150字以内。`,
+      `请生成"你敢挑战吗？"部分。
+
+要求：
+- 用一段流畅的情境描述（100-150字），把挑战任务融入故事情境中
+- 不要用"任务一、任务二"等分列格式，而是用叙事性语言自然引出挑战
+- 开头先描绘一个吸引人的真实场景，然后提出核心挑战问题或任务
+- 结尾用一句邀请语激发学生参与欲望
+- 语言通俗生动，符合该年段学生阅读水平
+- 整体是一个大情境下的大任务，而非多个小任务的罗列`,
       ST.currentTab
     );
     hideTyping();
@@ -1323,7 +1352,11 @@ function renderDoc() {
       <div class="doc-meta">${[inf.subject,inf.grade,inf.textbook,inf.lessons].filter(Boolean).join(' · ')}</div>`;
   }
 
-  if (d.challenge) h += sec('单元概览 · 01','你敢挑战吗？', d.challenge);
+  if (d.challenge) h += `<div class="doc-sec">
+    <div class="doc-sec-lbl">单元概览 · 01</div>
+    <div class="doc-sec-title">你敢挑战吗？</div>
+    <div class="doc-challenge-body">${d.challenge}</div>
+  </div>`;
   if (d.knowledge) {
     let knHtml = '';
     if (d.knowledgeData) {
