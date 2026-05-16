@@ -923,17 +923,142 @@ function promptForTab(tab) {
 点下方开始生成！`,
       [{ label:'开始生成作业与反思', cls:'ok', fn:"genHomework()" }], true);
   } else {
-    // 课时tab
-    const lessonInfo = lessonList.find(l => l.id === tab);
-    const name = lessonInfo ? lessonInfo.name : '本课时';
-    addBubble('ai', `现在开始「${name}」的备课。
-
-请告诉我这节课的课题名称，或者我根据单元内容帮你推荐？`,
-      [
-        { label:'帮我推荐课题', cls:'ok', fn:`suggestLessonName('${tab}')` },
-        { label:'直接开始设计', fn:`genLessonDesign('${tab}')` }
-      ], true);
+    // 课时tab —— 显示课时选择器
+    showLessonSelector(tab);
   }
+}
+
+// ══ 课时选择器 ══
+function showLessonSelector(tab) {
+  const w = document.getElementById('msgs');
+
+  // 从知识框架数据中获取课时列表
+  let options = [];
+  if (ST.doc.knowledgeData && ST.doc.knowledgeData.branches && ST.doc.knowledgeData.branches.length) {
+    options = ST.doc.knowledgeData.branches.map(b => ({
+      name: b.name,
+      lessons: b.lessons || ''
+    }));
+  }
+
+  const d = document.createElement('div');
+  d.className = 'msg ai';
+  d.id = `lesson-selector-${tab}`;
+
+  let selectHtml = '';
+  if (options.length > 0) {
+    selectHtml = `
+      <div style="margin-top:10px;">
+        <div style="font-size:11px;color:var(--ink-muted);margin-bottom:6px;font-weight:400;">
+          从单元课时中选择，或直接输入课题名称：
+        </div>
+        <select id="lesson-select-${tab}"
+          style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
+          background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;
+          color:var(--ink);outline:none;margin-bottom:8px;cursor:pointer;"
+          onchange="onLessonSelect('${tab}', this.value)">
+          <option value="">— 请选择课时 —</option>
+          ${options.map(o => `<option value="${o.name}">${o.name}${o.lessons ? '（'+o.lessons+'）' : ''}</option>`).join('')}
+          <option value="__custom__">✏️ 自行输入课题名称</option>
+        </select>
+        <div id="custom-input-${tab}" style="display:none;margin-bottom:8px;">
+          <input type="text" id="custom-name-${tab}"
+            placeholder="输入课题名称，如：《古诗三首》"
+            style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
+            background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;color:var(--ink);outline:none;"
+            onkeydown="if(event.key==='Enter')confirmLessonName('${tab}')">
+        </div>
+        <button onclick="confirmLessonName('${tab}')"
+          style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;
+          border-radius:7px;font-size:13px;font-family:'Noto Sans SC',sans-serif;
+          cursor:pointer;transition:background 0.2s;"
+          onmouseover="this.style.background='var(--accent)'"
+          onmouseout="this.style.background='var(--ink)'">
+          确认课题，开始备课 →
+        </button>
+      </div>`;
+  } else {
+    // 没有知识框架数据时，直接输入
+    selectHtml = `
+      <div style="margin-top:10px;">
+        <div style="font-size:11px;color:var(--ink-muted);margin-bottom:6px;font-weight:400;">
+          请输入本课时的课题名称：
+        </div>
+        <input type="text" id="custom-name-${tab}"
+          placeholder="如：《古诗三首》第一课时"
+          style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);
+          background:#fff;font-size:13px;font-family:'Noto Sans SC',sans-serif;color:var(--ink);
+          outline:none;margin-bottom:8px;"
+          onkeydown="if(event.key==='Enter')confirmLessonName('${tab}')">
+        <button onclick="confirmLessonName('${tab}')"
+          style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;
+          border-radius:7px;font-size:13px;font-family:'Noto Sans SC',sans-serif;cursor:pointer;"
+          onmouseover="this.style.background='var(--accent)'"
+          onmouseout="this.style.background='var(--ink)'">
+          确认课题，开始备课 →
+        </button>
+      </div>`;
+  }
+
+  d.innerHTML = `
+    <div class="msg-av">学</div>
+    <div class="msg-body" style="max-width:310px;">
+      <div class="msg-bub">
+        请选择本次要备课的课时
+        ${selectHtml}
+      </div>
+    </div>`;
+  w.appendChild(d);
+  w.scrollTop = w.scrollHeight;
+}
+
+function onLessonSelect(tab, value) {
+  const customDiv = document.getElementById(`custom-input-${tab}`);
+  if (value === '__custom__') {
+    if (customDiv) customDiv.style.display = 'block';
+    document.getElementById(`custom-name-${tab}`)?.focus();
+  } else {
+    if (customDiv) customDiv.style.display = 'none';
+  }
+}
+
+function confirmLessonName(tab) {
+  const select = document.getElementById(`lesson-select-${tab}`);
+  const customInput = document.getElementById(`custom-name-${tab}`);
+
+  let name = '';
+  if (select) {
+    name = select.value === '__custom__' || !select.value
+      ? (customInput?.value.trim() || '')
+      : select.value;
+  } else {
+    name = customInput?.value.trim() || '';
+  }
+
+  if (!name) { alert('请选择或输入课题名称'); return; }
+
+  // 更新课时名称
+  const lesson = lessonList.find(l => l.id === tab);
+  if (lesson) {
+    lesson.name = name;
+    if (!ST.doc.lessonsMap) ST.doc.lessonsMap = {};
+    if (!ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab] = {};
+    ST.doc.lessonsMap[tab].name = name;
+  }
+  renderLessonTabs();
+
+  // 移除选择器，显示确认信息
+  const sel = document.getElementById(`lesson-selector-${tab}`);
+  if (sel) sel.remove();
+
+  addBubble('ai', `好的，现在开始备「${name}」的课时学历案。
+
+将依次完成：
+① 课时目标
+② 评价任务
+③ 学习过程（热身→任务串→本课小结）`, [
+    { label:'开始生成课时学历案', cls:'g', fn:`genLessonDesign('${tab}')` }
+  ]);
 }
 
 // ══ 气泡 ══
