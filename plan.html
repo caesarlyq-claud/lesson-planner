@@ -276,6 +276,40 @@ body {
 .msg.user .msg-bub { background: var(--ink); color: #fff; border-bottom-right-radius: 3px; }
 .msg-bub b { font-weight: 500; color: var(--gold); }
 .msg.user .msg-bub b { color: #ffd980; }
+.checklist-bubble {
+  margin-top: 8px;
+  background: var(--green-light);
+  border: 1px solid rgba(45,122,74,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.checklist-bubble-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--green);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.checklist-bubble-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-light);
+  font-weight: 300;
+  line-height: 1.7;
+  padding: 1px 0;
+}
+.checklist-bubble-num {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-size: 9px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 3px;
+}
 
 .btn-area { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px; }
 .btn-q {
@@ -369,6 +403,108 @@ body {
 .doc-sec-body { font-size: 13px; line-height: 2; color: var(--ink-light); font-weight: 300; white-space: pre-wrap; }
 
 .doc-empty { text-align: center; padding: 3.5rem 2rem; color: var(--ink-muted); }
+
+/* ── 知识框架可视化 ── */
+.kmap-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 0.8rem;
+  font-family: 'Noto Sans SC', sans-serif;
+}
+.kmap-start {
+  background: var(--cream-dark);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 100px;
+  text-align: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.kmap-start-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.kmap-start-text {
+  font-size: 11px;
+  color: var(--ink-light);
+  font-weight: 300;
+  line-height: 1.6;
+}
+.kmap-arrow {
+  font-size: 18px;
+  color: var(--gold);
+  font-weight: 300;
+  margin-top: 18px;
+  flex-shrink: 0;
+}
+.kmap-center {
+  background: var(--ink);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 90px;
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+.kmap-center-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gold);
+  line-height: 1.5;
+}
+.kmap-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.kmap-branch {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.kmap-branch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.kmap-branch-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.kmap-branch-lessons {
+  font-size: 10px;
+  padding: 1px 8px;
+  background: var(--gold-light);
+  color: var(--gold);
+  border-radius: 10px;
+  font-weight: 500;
+}
+.kmap-task {
+  font-size: 11px;
+  color: var(--ink-light);
+  font-weight: 300;
+  line-height: 1.7;
+}
+.kmap-ability {
+  font-size: 10.5px;
+  color: var(--accent);
+  font-weight: 400;
+  margin-top: 4px;
+  font-style: italic;
+}
 .doc-empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.25; }
 .doc-empty h3 { font-family: 'Noto Serif SC', serif; font-size: 1rem; color: var(--ink-light); margin-bottom: 0.4rem; font-weight: 600; }
 .doc-empty p { font-size: 12px; font-weight: 300; line-height: 1.8; }
@@ -488,10 +624,9 @@ body {
   <button class="step-tab active" id="tab-0" onclick="switchTab(0)">单元概览</button>
   <span class="step-arrow">›</span>
   <div id="lessonTabs" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;"></div>
-  <span class="step-arrow">›</span>
+  <button onclick="addLessonTab()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px dashed var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:4px;">+ 新增课时</button>
+  <span class="step-arrow" style="margin:0 6px;">›</span>
   <button class="step-tab" id="tab-hw" onclick="switchTab('hw')">作业与反思</button>
-  <span style="margin:0 6px;color:var(--border);">|</span>
-  <button onclick="addLessonTab()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px dashed var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;">+ 新增课时</button>
   <div style="flex:1"></div>
   <span style="font-size:11px;color:var(--ink-muted);font-weight:300;white-space:nowrap;">可自由切换课时</span>
 </div>
@@ -816,6 +951,92 @@ function setLoad(v) {
 }
 
 
+// ══ 各环节质检清单 ══
+const CHECKLISTS = {
+  challenge: {
+    title: '挑战情境 · 自查清单',
+    items: [
+      '情境来自真实生活或模拟真实场景，不是虚假的',
+      '任务明确具体，学生知道要"做什么"和"交付什么"',
+      '对至少2/3的学生有一定挑战性，不能太简单',
+      '语言简洁通俗，符合该年段学生阅读水平',
+      '与本单元核心学习内容紧密关联'
+    ]
+  },
+  knowledge: {
+    title: '知识框架 · 自查清单',
+    items: [
+      '清晰呈现各课时主题及其逻辑关系',
+      '标注了每个模块的课时数',
+      '体现学习进阶（从感知→理解→应用）',
+      '标注了学生的能力起点（已有什么基础）',
+      '整体感强，不是零散知识点的罗列'
+    ]
+  },
+  objectives: {
+    title: '单元目标 · 自查清单',
+    items: [
+      '写了3-5条，每条都有明确的素养指向',
+      '主语是学生，不是教师（"学生能…"而非"教师教…"）',
+      '采用三维句法：通过…（过程），学会…（知识技能），形成…（素养）',
+      '结果可观察、可测量、可评价（避免"感悟""体验"等无法测量的词）',
+      '至少有两个核心素养可见，难度让2/3学生能达成'
+    ]
+  },
+  tips: {
+    title: '给你支招 · 自查清单',
+    items: [
+      '有清晰的进阶性学习路线（第一步…第二步…）',
+      '包含具体可操作的学习方法建议',
+      '提供了重难点突破的策略或问题链',
+      '让学生读完感到"我能学会"，有信心和方向'
+    ]
+  },
+  lesson: {
+    title: '课时学历案 · 自查清单',
+    items: [
+      '课时目标是单元目标的分解，而非重复',
+      '评价任务与目标一一对应，是表现性任务',
+      '学习过程：热身→任务串（2-3个）→本课小结，结构清晰',
+      '每个环节只写学生做什么，不写教师做什么',
+      '体现学习进阶（感知→理解→应用→迁移）',
+      '评价任务自然嵌入学习环节中，不是单独存在'
+    ]
+  },
+  homework: {
+    title: '作业与反思 · 自查清单',
+    items: [
+      '作业以单元为整体设计，不是知识点汇总',
+      '包含三类：巩固类（必做）、综合应用类（必做）、拓展提高类（选做）',
+      '至少2/3学生通过努力能完成必做部分',
+      '反思支架从"复述"→"关联"→"转化"三阶递进',
+      '反思问题引导学生思考素养的获得，不只是知识的回顾'
+    ]
+  }
+};
+
+function showChecklist(type) {
+  const cl = CHECKLISTS[type];
+  if (!cl) return;
+  const w = document.getElementById('msgs');
+  const d = document.createElement('div');
+  d.className = 'msg ai';
+  d.innerHTML = `
+    <div class="msg-av">学</div>
+    <div class="msg-body" style="max-width:310px;">
+      <div class="checklist-bubble">
+        <div class="checklist-bubble-title">📋 ${cl.title}</div>
+        ${cl.items.map((item, i) => `
+          <div class="checklist-bubble-item">
+            <div class="checklist-bubble-num">${i+1}</div>
+            <span>${item}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  w.appendChild(d);
+  w.scrollTop = w.scrollHeight;
+}
+
 // ══ 清除Markdown符号 ══
 function cleanMD(text) {
   return text
@@ -917,6 +1138,7 @@ async function genChallenge() {
       {label:'重新生成', fn:'genChallenge()'},
       {label:'告诉我修改意见', fn:''}
     ]);
+    showChecklist('challenge');
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
   setLoad(false);
 }
@@ -925,16 +1147,43 @@ async function genKnowledge() {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      `请生成"你需要学哪些知识？"——描述本单元知识结构和各课时安排，体现逻辑关系，整体感强，不要太细节。`,
+      `请生成本单元"你需要学哪些知识？"的结构化知识框架。
+
+在[正文]部分，必须严格输出以下JSON格式（不要输出其他任何内容）：
+{
+  "unitTheme": "单元大主题/大任务名称",
+  "abilityStart": "学生能力起点（已有什么基础）",
+  "branches": [
+    {
+      "name": "课时或模块名称",
+      "lessons": "X课时",
+      "tasks": ["学习任务1", "学习任务2"],
+      "ability": "培养的能力"
+    }
+  ]
+}
+
+在[对话]部分，用一句话说明框架逻辑。`,
       ST.currentTab
     );
     hideTyping();
-    if (parsed.content) { ST.doc.knowledge = parsed.content; renderDoc(); }
-    addBubble('ai', parsed.dialog || '已生成知识框架，请查看右侧预览。', [
+    if (parsed.content) {
+      try {
+        const knData = JSON.parse(parsed.content);
+        ST.doc.knowledge = parsed.content;
+        ST.doc.knowledgeData = knData;
+      } catch(e) {
+        ST.doc.knowledge = parsed.content;
+        ST.doc.knowledgeData = null;
+      }
+      renderDoc();
+    }
+    addBubble('ai', parsed.dialog || '已生成知识框架，请查看右侧可视化预览。', [
       {label:'✓ 满意，生成③单元目标', cls:'g', fn:'genObjectives()'},
       {label:'重新生成', fn:'genKnowledge()'},
       {label:'告诉我修改意见', fn:''}
     ]);
+    showChecklist('knowledge');
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
   setLoad(false);
 }
@@ -953,6 +1202,7 @@ async function genObjectives() {
       {label:'重新生成', fn:'genObjectives()'},
       {label:'告诉我修改意见', fn:''}
     ]);
+    showChecklist('objectives');
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
   setLoad(false);
 }
@@ -967,7 +1217,8 @@ async function genTips() {
     hideTyping();
     if (parsed.content) { ST.doc.tips = parsed.content; renderDoc(); }
     ST.steps[0] = 1;
-    addBubble('ai', '单元概览四个部分全部完成！点上方"+ 新增课时"开始课时备课，或告诉我需要修改哪个部分。', [
+    showChecklist('tips');
+    addBubble('ai', '单元概览四个部分全部完成！对照上方自查清单检查后，点"新增课时"开始课时备课。', [
       {label:'✓ 新增课时开始备课', cls:'g', fn:'addLessonTab()'},
       {label:'我需要修改某个部分', fn:''}
     ]);
@@ -1010,6 +1261,7 @@ async function genLessonDesign(tab) {
       {label:'重新生成', fn:`genLessonDesign('${tab}')`},
       {label:'告诉我修改意见', fn:''}
     ]);
+    showChecklist('lesson');
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
   setLoad(false);
 }
@@ -1050,8 +1302,9 @@ async function genHomework() {
       renderDoc();
     }
     ST.steps[4] = 1;
-    addBubble('ai', parsed.dialog || '作业与反思已生成，请查看右侧预览。', [
-      {label:'✓ 完成！查看完整文档', cls:'g', fn:''},
+    showChecklist('homework');
+    addBubble('ai', parsed.dialog || '作业与反思已生成！对照自查清单检查后，点"导出文档"获取完整学历案。', [
+      {label:'✓ 完成，导出文档', cls:'g', fn:'exportDoc()'},
       {label:'重新生成', fn:'genHomework()'},
       {label:'告诉我修改意见', fn:''}
     ]);
@@ -1071,7 +1324,45 @@ function renderDoc() {
   }
 
   if (d.challenge) h += sec('单元概览 · 01','你敢挑战吗？', d.challenge);
-  if (d.knowledge) h += sec('单元概览 · 02','你需要学哪些知识？', d.knowledge);
+  if (d.knowledge) {
+    let knHtml = '';
+    if (d.knowledgeData) {
+      const kd = d.knowledgeData;
+      knHtml = `
+        <div class="kmap-wrap">
+          <div class="kmap-start">
+            <div class="kmap-start-label">能力起点</div>
+            <div class="kmap-start-text">${kd.abilityStart || ''}</div>
+          </div>
+          <div class="kmap-arrow">→</div>
+          <div class="kmap-center">
+            <div class="kmap-center-title">${kd.unitTheme || ''}</div>
+          </div>
+          <div class="kmap-arrow">→</div>
+          <div class="kmap-branches">
+            ${(kd.branches||[]).map((b,i) => `
+              <div class="kmap-branch">
+                <div class="kmap-branch-header">
+                  <span class="kmap-branch-name">${b.name}</span>
+                  <span class="kmap-branch-lessons">${b.lessons||''}</span>
+                </div>
+                <div class="kmap-branch-tasks">
+                  ${(b.tasks||[]).map(t=>`<div class="kmap-task">• ${t}</div>`).join('')}
+                </div>
+                ${b.ability?`<div class="kmap-ability">↳ ${b.ability}</div>`:''}
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    } else {
+      knHtml = `<div class="doc-sec-body">${d.knowledge}</div>`;
+    }
+    h += `<div class="doc-sec">
+      <div class="doc-sec-lbl">单元概览 · 02</div>
+      <div class="doc-sec-title">你需要学哪些知识？</div>
+      ${knHtml}
+    </div>`;
+  }
   if (d.objectives) h += sec('单元概览 · 03','期望你学会什么？', d.objectives);
   if (d.tips) h += sec('单元概览 · 04','给你支招', d.tips);
 
