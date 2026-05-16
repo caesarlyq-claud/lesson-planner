@@ -1479,22 +1479,71 @@ async function genKnowledge() {
     );
     hideTyping();
     if (parsed.content) {
+      let knData = null;
+      let raw = parsed.content.trim();
+
+      // 尝试1：标准JSON解析
       try {
-        // 清理AI可能附加的 ```json ``` 包裹
-        let raw = parsed.content.trim();
-        raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        // 提取第一个 { 到最后一个 } 之间的内容
-        const start = raw.indexOf('{');
-        const end = raw.lastIndexOf('}');
-        if (start !== -1 && end !== -1) {
-          raw = raw.slice(start, end + 1);
-        }
-        const knData = JSON.parse(raw);
-        ST.doc.knowledge = raw;
+        let jsonStr = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+        const s = jsonStr.indexOf('{'), e = jsonStr.lastIndexOf('}');
+        if (s !== -1 && e !== -1) jsonStr = jsonStr.slice(s, e + 1);
+        knData = JSON.parse(jsonStr);
+      } catch(e1) {}
+
+      // 尝试2：YAML风格解析（unitTheme: xxx / abilityStart: xxx / branches: ...）
+      if (!knData) {
+        try {
+          const unitMatch = raw.match(/unitTheme[：:]\s*(.+)/);
+          const abilityMatch = raw.match(/abilityStart[：:]\s*(.+)/);
+          const branchMatches = [...raw.matchAll(/name[：:]\s*(.+?)[,，]\s*lessons[：:]\s*(.+)/g)];
+          if (unitMatch && branchMatches.length > 0) {
+            knData = {
+              unitTheme: unitMatch[1].trim().replace(/^["']|["']$/g, ''),
+              abilityStart: abilityMatch ? abilityMatch[1].trim().replace(/^["']|["']$/g, '') : '',
+              branches: branchMatches.map(m => ({
+                name: m[1].trim().replace(/^["'《]|["'》]$/g, '').replace(/[《》]/g, match => match),
+                lessons: m[2].trim().replace(/^["']|["']$/g, '').replace(/[,，}]/g, '')
+              }))
+            };
+            // 修正name中的书名号
+            knData.branches = knData.branches.map(b => ({
+              ...b,
+              name: raw.match(new RegExp('name[：:]\\s*(' + b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '|《[^》]+》)'))?.[1] || b.name
+            }));
+          }
+        } catch(e2) {}
+      }
+
+      // 尝试3：从带书名号的行提取课时列表
+      if (!knData) {
+        try {
+          const unitMatch = raw.match(/unitTheme[：:]\s*(.+)/);
+          const abilityMatch = raw.match(/abilityStart[：:]\s*(.+)/);
+          // 匹配 《xxx》（X课时）或 name: 《xxx》, lessons: X课时
+          const branchLines = [...raw.matchAll(/[《「]([^》」]+)[》」][^,，\n]*(?:[,，]\s*lessons[：:]\s*)?(\d+课时)/g)];
+          if (branchLines.length > 0) {
+            knData = {
+              unitTheme: unitMatch ? unitMatch[1].trim() : '',
+              abilityStart: abilityMatch ? abilityMatch[1].trim() : '',
+              branches: branchLines.map(m => ({
+                name: '《' + m[1].trim() + '》',
+                lessons: m[2].trim()
+              }))
+            };
+          }
+        } catch(e3) {}
+      }
+
+      if (knData && knData.branches && knData.branches.length > 0) {
+        ST.doc.knowledge = JSON.stringify(knData);
         ST.doc.knowledgeData = knData;
-      } catch(e) {
+      } else {
+        // 所有解析都失败，重新请求AI
         ST.doc.knowledge = parsed.content;
         ST.doc.knowledgeData = null;
+        addBubble('ai', '知识框架格式解析失败，请点"重新生成"再试一次。', [
+          {label:'重新生成', fn:'genKnowledge()'}
+        ]);
       }
       renderDoc();
     }
