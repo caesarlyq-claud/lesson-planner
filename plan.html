@@ -427,20 +427,30 @@ body {
 
 /* ── 知识框架可视化 ── */
 .kmap-wrap {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   margin-top: 0.8rem;
   font-family: 'Noto Sans SC', sans-serif;
+  width: 100%;
+}
+.kmap-top-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: 0;
+  width: 100%;
 }
 .kmap-start {
   background: var(--cream-dark);
-  border-radius: 8px;
-  padding: 10px 12px;
-  min-width: 100px;
+  border-radius: 8px 0 0 8px;
+  padding: 10px 14px;
+  min-width: 110px;
+  max-width: 130px;
   text-align: center;
   flex-shrink: 0;
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 .kmap-start-label {
   font-size: 9px;
@@ -448,7 +458,7 @@ body {
   color: var(--ink-muted);
   letter-spacing: 1px;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 .kmap-start-text {
   font-size: 11px;
@@ -456,74 +466,81 @@ body {
   font-weight: 300;
   line-height: 1.6;
 }
-.kmap-arrow {
-  font-size: 18px;
+.kmap-arrow-v {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
   color: var(--gold);
-  font-weight: 300;
-  margin-top: 18px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 .kmap-center {
   background: var(--ink);
-  border-radius: 8px;
   padding: 10px 14px;
-  min-width: 90px;
+  min-width: 80px;
   text-align: center;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px;
+  border: 1px solid var(--ink);
 }
 .kmap-center-title {
   font-size: 12px;
   font-weight: 500;
   color: var(--gold);
   line-height: 1.5;
+  writing-mode: horizontal-tb;
 }
 .kmap-branches {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   flex: 1;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
 }
 .kmap-branch {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--gold);
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-.kmap-branch-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  min-height: 52px;
 }
+.kmap-branch:last-child { border-bottom: none; }
+.kmap-branch:nth-child(even) { background: var(--cream); }
 .kmap-branch-name {
   font-size: 12px;
   font-weight: 500;
   color: var(--ink);
+  padding-left: 8px;
+  border-left: 3px solid var(--gold);
 }
+.kmap-branch-tasks {
+  font-size: 11.5px;
+  color: var(--ink-light);
+  font-weight: 300;
+  line-height: 1.7;
+}
+.kmap-task { display: inline; }
 .kmap-branch-lessons {
   font-size: 10px;
-  padding: 1px 8px;
+  padding: 2px 10px;
   background: var(--gold-light);
   color: var(--gold);
   border-radius: 10px;
   font-weight: 500;
-}
-.kmap-task {
-  font-size: 11px;
-  color: var(--ink-light);
-  font-weight: 300;
-  line-height: 1.7;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .kmap-ability {
   font-size: 10.5px;
   color: var(--accent);
   font-weight: 400;
-  margin-top: 4px;
+  margin-top: 3px;
   font-style: italic;
 }
 .doc-empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.25; }
@@ -1353,7 +1370,7 @@ function renderDoc() {
   }
 
   if (d.challenge) h += `<div class="doc-sec">
-    <div class="doc-sec-lbl">单元概览 · 01</div>
+    <div class="doc-sec-lbl">01</div>
     <div class="doc-sec-title">你敢挑战吗？</div>
     <div class="doc-challenge-body">${d.challenge}</div>
   </div>`;
@@ -1363,41 +1380,41 @@ function renderDoc() {
       const kd = d.knowledgeData;
       knHtml = `
         <div class="kmap-wrap">
-          <div class="kmap-start">
-            <div class="kmap-start-label">能力起点</div>
-            <div class="kmap-start-text">${kd.abilityStart || ''}</div>
-          </div>
-          <div class="kmap-arrow">→</div>
-          <div class="kmap-center">
-            <div class="kmap-center-title">${kd.unitTheme || ''}</div>
-          </div>
-          <div class="kmap-arrow">→</div>
-          <div class="kmap-branches">
-            ${(kd.branches||[]).map((b,i) => `
-              <div class="kmap-branch">
-                <div class="kmap-branch-header">
-                  <span class="kmap-branch-name">${b.name}</span>
+          <div class="kmap-top-row">
+            <div class="kmap-start">
+              <div class="kmap-start-label">能力起点</div>
+              <div class="kmap-start-text">${kd.abilityStart || ''}</div>
+            </div>
+            <div class="kmap-arrow-v">→</div>
+            <div class="kmap-center">
+              <div class="kmap-center-title">${kd.unitTheme || ''}</div>
+            </div>
+            <div class="kmap-arrow-v">→</div>
+            <div class="kmap-branches">
+              ${(kd.branches||[]).map((b,i) => `
+                <div class="kmap-branch">
+                  <div class="kmap-branch-name">${b.name}</div>
+                  <div class="kmap-branch-tasks">
+                    ${(b.tasks||[]).map(t=>`<span class="kmap-task">• ${t} </span>`).join('')}
+                    ${b.ability?`<div class="kmap-ability">↳ ${b.ability}</div>`:''}
+                  </div>
                   <span class="kmap-branch-lessons">${b.lessons||''}</span>
                 </div>
-                <div class="kmap-branch-tasks">
-                  ${(b.tasks||[]).map(t=>`<div class="kmap-task">• ${t}</div>`).join('')}
-                </div>
-                ${b.ability?`<div class="kmap-ability">↳ ${b.ability}</div>`:''}
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           </div>
         </div>`;
     } else {
       knHtml = `<div class="doc-sec-body">${d.knowledge}</div>`;
     }
     h += `<div class="doc-sec">
-      <div class="doc-sec-lbl">单元概览 · 02</div>
+      <div class="doc-sec-lbl">02</div>
       <div class="doc-sec-title">你需要学哪些知识？</div>
       ${knHtml}
     </div>`;
   }
-  if (d.objectives) h += sec('单元概览 · 03','期望你学会什么？', d.objectives);
-  if (d.tips) h += sec('单元概览 · 04','给你支招', d.tips);
+  if (d.objectives) h += sec('03','期望你学会什么？', d.objectives);
+  if (d.tips) h += sec('04','给你支招', d.tips);
 
   if (ST.doc.lessonsMap) {
     lessonList.forEach((ll) => {
