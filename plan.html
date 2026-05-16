@@ -503,12 +503,12 @@ body {
 }
 .kmap-branch {
   display: grid;
-  grid-template-columns: 130px 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--border);
-  gap: 10px;
-  min-height: 52px;
+  gap: 12px;
+  min-height: 44px;
 }
 .kmap-branch:last-child { border-bottom: none; }
 .kmap-branch:nth-child(even) { background: var(--cream); }
@@ -1193,23 +1193,24 @@ async function genKnowledge() {
   setLoad(true); showTyping();
   try {
     const parsed = await callAI(
-      `请生成本单元"你需要学哪些知识？"的结构化知识框架。
+      `请生成本单元"你需要学哪些知识？"的课时结构图。
 
-在[正文]部分，必须严格输出以下JSON格式（不要输出其他任何内容）：
+要求：
+- unitTheme 与"你敢挑战吗？"的大任务紧密呼应，是完成大任务需要的能力路径（如"观察事物·学会描写"），不是具体知识点罗列
+- abilityStart 用一句话描述学生已有的起点能力
+- 每个branch只写课文/课时名称和课时数，不写具体任务，不写素养目标
+- 课时数量控制在3-6个
+
+在[正文]部分，严格输出以下JSON（不含其他内容）：
 {
-  "unitTheme": "单元大主题/大任务名称",
-  "abilityStart": "学生能力起点（已有什么基础）",
+  "unitTheme": "与大任务呼应的能力路径（8字以内）",
+  "abilityStart": "学生已有基础一句话",
   "branches": [
-    {
-      "name": "课时或模块名称",
-      "lessons": "X课时",
-      "tasks": ["学习任务1", "学习任务2"],
-      "ability": "培养的能力"
-    }
+    { "name": "课文/课时名称", "lessons": "X课时" }
   ]
 }
 
-在[对话]部分，用一句话说明框架逻辑。`,
+在[对话]部分，一句话说明课时安排逻辑。`,
       ST.currentTab
     );
     hideTyping();
@@ -1224,7 +1225,7 @@ async function genKnowledge() {
       }
       renderDoc();
     }
-    addBubble('ai', parsed.dialog || '已生成知识框架，请查看右侧可视化预览。', [
+    addBubble('ai', parsed.dialog || '已生成知识框架，请查看右侧预览。', [
       {label:'✓ 满意，生成③单元目标', cls:'g', fn:'genObjectives()'},
       {label:'重新生成', fn:'genKnowledge()'},
       {label:'告诉我修改意见', fn:''}
@@ -1394,10 +1395,7 @@ function renderDoc() {
               ${(kd.branches||[]).map((b,i) => `
                 <div class="kmap-branch">
                   <div class="kmap-branch-name">${b.name}</div>
-                  <div class="kmap-branch-tasks">
-                    ${(b.tasks||[]).map(t=>`<span class="kmap-task">• ${t} </span>`).join('')}
-                    ${b.ability?`<div class="kmap-ability">↳ ${b.ability}</div>`:''}
-                  </div>
+                  <div></div>
                   <span class="kmap-branch-lessons">${b.lessons||''}</span>
                 </div>
               `).join('')}
