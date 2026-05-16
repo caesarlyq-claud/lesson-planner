@@ -906,14 +906,13 @@ async function sendMsg() {
 async function genChallenge() {
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `请生成"你敢挑战吗？"部分。\n要求：创设真实情境，任务明确，对2/3学生有挑战，语言简洁通俗，150字以内。生成后直接询问是否满意。`,
+    const parsed = await callAI(
+      `请生成"你敢挑战吗？"部分。要求：创设真实情境，任务明确，对2/3学生有挑战，语言简洁通俗，150字以内。`,
       ST.currentTab
     );
     hideTyping();
-    ST.doc.challenge = reply;
-    renderDoc();
-    addBubble('ai', reply, [
+    if (parsed.content) { ST.doc.challenge = parsed.content; renderDoc(); }
+    addBubble('ai', parsed.dialog || '已生成挑战情境，请查看右侧预览。', [
       {label:'✓ 满意，生成②知识框架', cls:'g', fn:'genKnowledge()'},
       {label:'重新生成', fn:'genChallenge()'},
       {label:'告诉我修改意见', fn:''}
@@ -943,14 +942,13 @@ async function genKnowledge() {
 async function genObjectives() {
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `知识框架已确认。请生成"期望你学会什么？"（单元学习目标）。\n要求：3-5条，主语是学生，三维句法"通过…学会…形成…"，结果可测可评，至少两个核心素养，难度保证2/3学生能达成。生成后直接询问是否满意。`,
+    const parsed = await callAI(
+      `请生成"期望你学会什么？"（单元学习目标）。3-5条，主语是学生，三维句法"通过…学会…形成…"，结果可测可评，至少两个核心素养，难度保证2/3学生能达成。`,
       ST.currentTab
     );
     hideTyping();
-    ST.doc.objectives = reply;
-    renderDoc();
-    addBubble('ai', reply, [
+    if (parsed.content) { ST.doc.objectives = parsed.content; renderDoc(); }
+    addBubble('ai', parsed.dialog || '已生成单元目标，请查看右侧预览。', [
       {label:'✓ 满意，生成④给你支招', cls:'g', fn:'genTips()'},
       {label:'重新生成', fn:'genObjectives()'},
       {label:'告诉我修改意见', fn:''}
@@ -962,16 +960,15 @@ async function genObjectives() {
 async function genTips() {
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `单元目标已确认。请生成"给你支招"——进阶性学习路线图，包含问题链或任务串，提供具体方法建议，让学生感到有用，200字以内。生成后直接询问是否满意。`,
+    const parsed = await callAI(
+      `请生成"给你支招"——进阶性学习路线图，包含问题链或任务串，提供具体方法建议，让学生感到有用，200字以内。`,
       ST.currentTab
     );
     hideTyping();
-    ST.doc.tips = reply;
+    if (parsed.content) { ST.doc.tips = parsed.content; renderDoc(); }
     ST.steps[0] = 1;
-    renderDoc();
-    addBubble('ai', `🎉 **单元概览四个部分全部完成！**\n\n右侧文档已生成。你可以：\n- 点击上方步骤标签切换到**第1课时**继续备课\n- 或者先检查右侧文档，有需要随时告诉我修改`, [
-      {label:'✓ 去备第1课时', cls:'g', fn:'switchTab(1)'},
+    addBubble('ai', '单元概览四个部分全部完成！点上方"+ 新增课时"开始课时备课，或告诉我需要修改哪个部分。', [
+      {label:'✓ 新增课时开始备课', cls:'g', fn:'addLessonTab()'},
       {label:'我需要修改某个部分', fn:''}
     ]);
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
@@ -997,21 +994,18 @@ async function suggestLessonName(tab) {
 }
 
 async function genLessonDesign(tab) {
-  const lessonIdx = tab;
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `请生成第${tab}课时的完整学历案，包含：\n1. 课时目标（2-4条，对接单元目标，可指标化）\n2. 评价任务（每条目标对应1个任务，表现性评价为主）\n3. 学习过程（热身/导入→任务环节1-3→本课小结，体现进阶，嵌入评价，每个活动预设时间，只写学生做什么）\n\n请先生成框架骨架供我确认，确认后再细化。`,
+    const parsed = await callAI(
+      `请生成这个课时的学历案框架，包含：1.课时目标（2-4条，对接单元目标）2.评价任务（与目标匹配，表现性评价）3.学习过程骨架（热身→任务1-3→本课小结）。先给骨架供确认，确认后再细化。`,
       tab
     );
     hideTyping();
-    // 解析并存储
     if (!ST.doc.lessonsMap) ST.doc.lessonsMap = {};
     if (!ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab] = {};
-    ST.doc.lessonsMap[tab].process = reply;
+    if (parsed.content) { ST.doc.lessonsMap[tab].process = parsed.content; renderDoc(); }
     ST.steps[tab] = 1;
-    renderDoc();
-    addBubble('ai', reply, [
+    addBubble('ai', parsed.dialog || '已生成课时框架，请查看右侧预览。', [
       {label:'✓ 框架满意，细化内容', cls:'g', fn:`refineLessonDesign('${tab}')`},
       {label:'重新生成', fn:`genLessonDesign('${tab}')`},
       {label:'告诉我修改意见', fn:''}
@@ -1021,19 +1015,20 @@ async function genLessonDesign(tab) {
 }
 
 async function refineLessonDesign(tab) {
-  const lessonIdx = tab - 1;
   setLoad(true); showTyping();
   try {
-    const reply = await callAI(
-      `框架已确认，请在此基础上细化每个学习环节的具体内容：\n- 每个任务的具体学生活动描述\n- 明确嵌入评价任务的位置\n- 重难点处的学习支架\n- 本课小结的反思问题\n\n注意：是学生的"学习支架"，不是作业单，文本简洁有邀请性。`,
+    const parsed = await callAI(
+      `请在框架基础上细化每个环节：具体学生活动描述、嵌入评价任务的位置、重难点学习支架、本课小结反思问题。文本简洁有邀请性，是学习支架不是作业单。`,
       tab
     );
     hideTyping();
-    if (ST.doc.lessonsMap && ST.doc.lessonsMap[tab]) ST.doc.lessonsMap[tab].process = reply;
-    renderDoc();
-    addBubble('ai', reply, [
-      {label:'✓ 完成，继续下一课时', cls:'g', fn:`switchTab(${tab+1<4?tab+1:4})`},
-      {label:'重新细化', fn:`refineLessonDesign(${tab})`},
+    if (parsed.content && ST.doc.lessonsMap && ST.doc.lessonsMap[tab]) {
+      ST.doc.lessonsMap[tab].process = parsed.content;
+      renderDoc();
+    }
+    addBubble('ai', parsed.dialog || '课时学历案已细化，请查看右侧预览。', [
+      {label:'✓ 完成，新增下一课时', cls:'g', fn:'addLessonTab()'},
+      {label:'重新细化', fn:`refineLessonDesign('${tab}')`},
       {label:'告诉我修改意见', fn:''}
     ]);
   } catch(e){ hideTyping(); addBubble('ai',`出错：${e.message}`); }
